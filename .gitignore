@@ -1,0 +1,19 @@
+.dub
+docs.json
+__dummy.html
+docs/
+pepel.so
+pepel.dylib
+pepel.dll
+pepel.a
+pepel.lib
+pepel-test-*
+*.exe
+*.o
+*.obj
+*.lst
+
+dub.selections.json
+*.dll
+# config file
+monkas.json

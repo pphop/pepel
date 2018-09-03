@@ -1,7 +1,8 @@
 module pepel.message;
 
+import pepel.internal;
+
 immutable(TwitchMessage) parseMessage(string rawLine) {
-    import std.conv : to;
     import std.regex : matchFirst, regex;
     import std.traits : EnumMembers;
     import std.uni : toLower;
@@ -11,25 +12,22 @@ immutable(TwitchMessage) parseMessage(string rawLine) {
     auto matched = rawLine.matchFirst(msgTypeRegex);
     if (!matched) {
         //log
-        ret.type = MessageType.unknown;
-        ret.msg = UnknownMessage(rawLine);
+        ret = UnknownMessage(rawLine);
         return ret;
     }
 
     immutable msgType = matched["type"];
-    foreach (type; EnumMembers!MessageType) {
-        if (msgType.toLower == type.to!string) {
-            ret.type = type;
-            break;
-        }
-    }
 
     //todo: make it less scuffed
+    bool isSet;
     static foreach (type; EnumMembers!MessageType) {
-        if (ret.type == type) {
-            mixin("auto payload = " ~ type ~ "(rawLine);");
-            ret.msg = payload;
+        if (msgType.toLower == type) {
+            mixin("ret = " ~ type ~ "(rawLine);");
+            isSet = true;
         }
+    }
+    if (!isSet) {
+        ret = UnknownMessage(rawLine);
     }
 
     return ret;
@@ -46,12 +44,7 @@ enum MessageType : string {
     ping = "PingMessage"
 }
 
-struct TwitchMessage {
-    import std.variant : Algebraic;
-
-    Algebraic!(UnknownMessage, PingMessage, PrivMessage) msg;
-    MessageType type;
-}
+alias TwitchMessage = from!"std.variant".Algebraic!(UnknownMessage, PingMessage, PrivMessage);
 
 struct UnknownMessage {
     string rawLine;

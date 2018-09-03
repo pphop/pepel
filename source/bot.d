@@ -27,17 +27,12 @@ class Bot {
     }
 
     void listen() {
-        loop: while (conn.waitForData()) {
+        import std.variant : visit;
+
+        while (conn.waitForData()) {
             auto raw = cast(string) conn.readLine;
             auto message = parseMessage(raw);
-
-            static foreach (msgType; EnumMembers!MessageType) {
-                if (message.type == msgType) {
-                    auto actualMessage = mixin("message.msg.get!" ~ msgType);
-                    handleMessage(actualMessage);
-                    continue loop;
-                }
-            }
+            message.visit!(msg => handleMessage(msg));
         }
     }
 

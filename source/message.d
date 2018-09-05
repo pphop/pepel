@@ -3,6 +3,7 @@ module pepel.message;
 import pepel.internal;
 
 immutable(TwitchMessage) parseMessage(string rawLine) {
+    import std.conv : to;
     import std.regex : matchFirst, regex;
     import std.traits : EnumMembers;
     import std.uni : toLower;
@@ -21,7 +22,7 @@ immutable(TwitchMessage) parseMessage(string rawLine) {
     //todo: make it less scuffed
     bool isSet;
     static foreach (type; EnumMembers!MessageType) {
-        if (msgType.toLower == type) {
+        if (msgType.toLower == type.to!string) {
             mixin("ret = " ~ type ~ "(rawLine);");
             isSet = true;
         }

@@ -1,18 +1,18 @@
 module pepel.bot;
 
-import std.algorithm, std.array, std.stdio, std.string, std.traits;
-
 import vibe.core.net, vibe.stream.operations;
 
 import pepel.config, pepel.message;
 
 class Bot {
-    import std.traits : EnumMembers;
+    import std.traits : EnumMembers, isSomeString;
 
     private Config config;
     private TCPConnection conn;
 
     this(Config cfg) {
+        import std.format : format;
+
         config = cfg;
         conn = connectTCP("irc.chat.twitch.tv", 6667u);
         string[] toWrite;
@@ -180,6 +180,8 @@ private:
     }
 
     public void addContainsHandler(string contains, PrivMessageHandler.Handler handler) {
+        import std.format : format;
+
         assert((contains in privMessageHandler_.containsHandlers) is null,
                 format!"handler for 'contains' '%s' is already registered"(contains));
 
@@ -187,6 +189,8 @@ private:
     }
 
     public void addCommandHandler(string command, PrivMessageHandler.Handler handler) {
+        import std.format : format;
+
         assert((command in privMessageHandler_.commandHandlers) is null,
                 format!"handler for command '%s' is already registered"(command));
 

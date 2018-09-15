@@ -7,7 +7,7 @@ import pepel.config, pepel.message;
 class Bot {
     import std.traits : EnumMembers, isSomeString;
 
-    private Config config;
+    Config config;
     private TCPConnection conn;
 
     this(Config cfg) {
@@ -94,10 +94,6 @@ class Bot {
     static foreach (msgType; EnumMembers!MessageType) {
         mixin MessageHandler!msgType;
     }
-
-    private void pingHandler(PingMessage) {
-        write("PONG :tmi.twitch.tv");
-    }
 }
 
 //maybe redo
@@ -145,7 +141,7 @@ private:
 
         void handle(PrivMessage message, string cmdPrefix) {
             import std.algorithm : startsWith;
-            import std.array : empty, front, split;
+            import std.array : split;
             import std.string : strip;
 
             bool stop;
@@ -163,11 +159,12 @@ private:
                 }
             }
 
-            immutable command = words.front.startsWith(cmdPrefix)
-                ? words.front[cmdPrefix.length .. $] : ""; //NotLikeThis
-            if (!command.empty) {
-                if (auto handler = command in commandHandlers) {
-                    (*handler)(message);
+            auto msgText = message.text;
+            if (msgText.startsWith(cmdPrefix)) {
+                foreach (command, handler; commandHandlers) {
+                    if (msgText[cmdPrefix.length .. $].startsWith(command)) {
+                        handler(message);
+                    }
                 }
             }
         }

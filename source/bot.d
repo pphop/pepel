@@ -23,7 +23,6 @@ class Bot {
             toWrite ~= format!"JOIN #%s"(ch);
         }
         write(toWrite);
-        addPingMessageHandler(&pingHandler);
     }
 
     void listen() {

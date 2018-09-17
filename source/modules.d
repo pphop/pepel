@@ -262,7 +262,7 @@ class SystemModule {
 }
 
 @moduleName("example") @description("example NaM module")
-class ExampleModule {
+public class ExampleModule {
     Bot bot;
     this(Bot b) {
         bot = b;

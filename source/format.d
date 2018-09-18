@@ -15,10 +15,12 @@ struct Formatter(T, string[] fmtmappings)
     mixin(generateRegexFields!fmtmappings);
 
     string format(string fmt, T value) {
+        import std.conv : to;
         import std.regex : replaceAll;
 
         static foreach (mapping; fmtmappings.map!(a => a.split(">").map!strip)) {
-            fmt = fmt.replaceAll!(m => mixin("value." ~ mapping[1]))(mixin("_regex" ~ mapping[1]));
+            fmt = fmt.replaceAll!(m => mixin("value." ~ mapping[1] ~ ".to!string"))(
+                    mixin("_regex" ~ mapping[1]));
         }
         return fmt;
     }
@@ -40,8 +42,9 @@ private template generateRegexFields(string[] mappings) {
     }
 }
 
+// maybe check if able to .to!string a field
 private bool mappingIsValid(T, string[] mappings)() {
-    import std.algorithm : map;
+    import std.algorithm : map, sort, uniq;
     import std.array : array, split;
     import std.string : format, strip;
 
@@ -53,6 +56,8 @@ private bool mappingIsValid(T, string[] mappings)() {
                     format!"there is no '%s' field for type %s"(mSplit[1], T.stringof));
         }
     }
+    static assert(mappings.map!(a => a.split(">").map!strip[0])
+            .array.sort.uniq.array.length == mappings.length, "mapping contains repeating patterns");
     return true;
 }
 
@@ -63,6 +68,8 @@ unittest {
     }
 
     assert(!__traits(compiles, Formatter!(S, ["qwe > fieldThatDoesntExist"])()));
+    assert(!__traits(compiles, Formatter!(S, ["repeating mapping > a",
+            "repeating mapping > b"])()));
 
     auto f = Formatter!(S, ["fielda > a", "s.fieldb > b"])();
 

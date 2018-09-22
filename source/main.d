@@ -6,5 +6,6 @@ void main() {
     auto cfg = Config("monkas.json");
     auto bot = new Bot(cfg);
     bot.registerModules!ExampleModule;
+    bot.connect();
     bot.listen();
 }

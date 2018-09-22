@@ -2,7 +2,8 @@ module pepel.message;
 
 import pepel.internal;
 
-immutable(TwitchMessage) parseMessage(string rawLine) {
+immutable(TwitchMessage) parseMessage(const string rawLine) {
+    import std.algorithm : filter;
     import std.conv : to;
     import std.regex : matchFirst, regex;
     import std.traits : EnumMembers;
@@ -19,15 +20,14 @@ immutable(TwitchMessage) parseMessage(string rawLine) {
 
     immutable msgType = matched["type"];
 
-    //todo: make it less scuffed
-    bool isSet;
-    static foreach (type; EnumMembers!MessageType) {
-        if (msgType.toLower == type.to!string) {
-            mixin("ret = " ~ type ~ "(rawLine);");
-            isSet = true;
+sw:
+    switch (msgType.toLower) {
+        static foreach (type; [EnumMembers!MessageType].filter!(a => a != MessageType.unknown)) {
+    case type.to!string:
+            ret = mixin(type ~ "(rawLine)");
+            break sw;
         }
-    }
-    if (!isSet) {
+    default:
         ret = UnknownMessage(rawLine);
     }
 

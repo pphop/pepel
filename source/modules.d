@@ -23,7 +23,7 @@ struct moduleName {
     string name;
 }
 
-struct description {
+struct helpMsg {
     string text;
 }
 
@@ -32,7 +32,7 @@ struct moduleVar {
     string name;
 }
 
-struct onMessage {
+struct on {
     MessageType type;
 }
 
@@ -49,18 +49,11 @@ struct command {
 
 private:
 
-struct CommandInfo {
-    string command;
-    string description = "no description";
-}
-
 struct ModuleInfo {
     string name;
-    string descriprion = "no description";
-    CommandInfo[] commands;
+    string[] commands;
 }
 
-//used only for 'help' commands
 ModuleInfo[string] modulesInfo;
 
 void extractModuleInfo(M)() {
@@ -75,8 +68,8 @@ void extractModuleInfo(M)() {
 
     ModuleInfo info;
     info.name = mName;
-    static if (hasUDA!(M, description)) {
-        info.descriprion = getUDAs!(M, description)[0].text;
+    static if (hasUDA!(M, helpMsg)) {
+        info.helpMsg = getUDAs!(M, helpMsg)[0].text;
     }
 
     info.extractCommandsInfo!M;
@@ -84,6 +77,8 @@ void extractModuleInfo(M)() {
 }
 
 void extractCommandsInfo(M)(ref ModuleInfo info) {
+    import std.algorithm : map, sort, splitter, uniq;
+    import std.array : array;
     import std.format : format;
     import std.traits : getUDAs, hasUDA;
 
@@ -95,25 +90,26 @@ void extractCommandsInfo(M)(ref ModuleInfo info) {
                         format!"%s in module %s should have valid command attribute"(member,
                             M.stringof));
 
-                CommandInfo cmdInfo;
-                cmdInfo.command = cmd;
-                static if (hasUDA!(mixin("M." ~ member), description)) {
-                    cmdInfo.description = getUDAs!(mixin("M." ~ member), description)[0].text;
-                }
-                info.commands ~= cmdInfo;
+                info.commands ~= cmd;
             }
         }
     }
+    info.commands = info.commands.map!(a => a.splitter(" ").front).array.sort.uniq.array;
 }
 
 void registerMessageHandlers(M)(Bot bot, M m) {
     static foreach (member; __traits(allMembers, M)) {
         static foreach (attr; __traits(getAttributes, mixin("M." ~ member))) {
-            static if (is(typeof(attr) == onMessage)) {
+            static if (is(typeof(attr) == on)) {
                 {
                     enum msgType = attr.type;
                     bot.registerHandler!(msgType, member)(m);
                 }
+            }
+            //make it less scuffed
+            else static if (is(attr == always) || is(typeof(attr) == command)
+                    || is(typeof(attr) == contains)) {
+                bot.registerPrivMsgHandler!member(m);
             }
         }
     }
@@ -123,12 +119,12 @@ void registerHandler(string msgType, string member, M)(Bot bot, M m) {
     mixin("bot.add" ~ msgType ~ "Handler(&m." ~ member ~ ");");
 }
 
-void registerHandler(string msgType : "PrivMessage", string member, M)(Bot bot, M m) {
+void registerPrivMsgHandler(string member, M)(Bot bot, M m) {
     int lidlCheck;
 
     mixin("auto handler = &m." ~ member ~ ";");
     static foreach (attr; __traits(getAttributes, mixin("M." ~ member))) {
-        static if (is(typeof(attr) == always)) {
+        static if (is(attr == always)) {
             bot.addPriorityHandler(handler);
             lidlCheck++;
         }
@@ -137,7 +133,7 @@ void registerHandler(string msgType : "PrivMessage", string member, M)(Bot bot, 
             lidlCheck++;
         }
         else static if (is(typeof(attr) == command)) {
-            bot.addCommandHandler(attr.command, handler);
+            bot.addCommandHandler(attr.command, handler.helpMsgWrapper!(member, M)(bot));
             lidlCheck++;
         }
     }
@@ -145,139 +141,121 @@ void registerHandler(string msgType : "PrivMessage", string member, M)(Bot bot, 
     assert(lidlCheck == 1);
 }
 
+//this is terrible
+void delegate(PrivMessage) helpMsgWrapper(string member, M)(void delegate(PrivMessage) hand, Bot bot) {
+    return (PrivMessage msg) {
+        import std.algorithm : startsWith;
+        import std.traits : getUDAs, hasUDA;
+
+        static if (hasUDA!(mixin("M." ~ member), helpMsg)) {
+            static immutable help = getUDAs!(mixin("M." ~ member), helpMsg)[0].text;
+        }
+        else {
+            static immutable help = "no help message provided";
+        }
+        enum helpCmd = getUDAs!(mixin("M." ~ member), command)[0].command ~ " -help";
+        if (msg.text[bot.config.cmdPrefix.length .. $].startsWith(helpCmd)) {
+            bot.privMsg(msg.channel, help);
+            return;
+        }
+        hand(msg);
+    };
+}
+
 @moduleName("system")
-@description("module respinsible for basic module management and help commands")
 class SystemModule {
     Bot bot;
     this(Bot b) {
         bot = b;
     }
 
-    @onMessage(MessageType.privmsg) @command("help") void helCmdHandler(PrivMessage msg) {
+    @helpMsg("help's help command NaM")
+    @command("help") void helCmdHandler(PrivMessage msg) {
         import std.format : format;
 
         bot.privMsgf(msg.channel,
-                format!`"%1$scommand -help" or "%1$smodule -help"`(bot.config.cmdPrefix));
+                format!`"%1$scmdlist" | "%1$smodule list" | "%1$s<cmd> -help"`(bot.config.cmdPrefix));
     }
 
-    @description(`basic command help, "command -help" for usage`)
-    @onMessage(MessageType.privmsg) @command("command") void cmdHelpHandler(PrivMessage msg) {
-        import std.algorithm : find, joiner, map;
-        import std.array : split;
-        import std.format : format;
-
-        immutable helpMsg = format!`usage: "%1$scommand -list" | "%1$scommand <cmd-name>"`(
-                bot.config.cmdPrefix);
-        auto args = msg.text.split(" ");
-        if (args.length < 2) {
-            bot.privMsg(msg.channel, helpMsg);
-            return;
-        }
-
-        auto cmd = args[1];
-        switch (cmd) {
-        case "-help":
-            bot.privMsg(msg.channel, helpMsg);
-            break;
-        case "-list":
-            auto cmds = modulesInfo.byValue
-                .map!(a => a.commands)
-                .joiner
-                .map!(a => a.command);
-            bot.privMsgf(msg.channel, "available commands: %s", cmds.joiner(", "));
-            break;
-        default:
-            auto found = modulesInfo.byValue
-                .map!(a => a.commands)
-                .joiner
-                .find!(a => a.command == cmd);
-            if (found.empty) {
-                bot.privMsgf(msg.channel, "there is no %s command", cmd);
-                return;
-            }
-            bot.privMsgf(msg.channel, "%s: %s", found.front.command, found.front.description);
-        }
-    }
-
-    @description(`basic module management command, "module -help" for usage`)
-    @onMessage(MessageType.privmsg) @command("module") void modulesHandler(PrivMessage msg) {
+    @helpMsg("lists all available commands")
+    @command("cmdlist") void cmdListHandler(PrivMessage msg) {
         import std.algorithm : joiner, map;
-        import std.array : split;
-        import std.format : format;
 
-        immutable helpMsg = format!(
-                `usage: "%1$smodule -list" | "%1$smodule <m-name> [commands|enable|disable]"`)(
-                bot.config.cmdPrefix);
+        bot.privMsgf(msg.channel, "available commands: %s",
+                modulesInfo.byValue.map!(a => a.commands).joiner.joiner(", "));
+    }
+
+    @helpMsg("lists all modules")
+    @command("module list") void moduleListHandler(PrivMessage msg) {
+        import std.algorithm : joiner, map;
+
+        //TODO: mark modulenames with "+"/"-" after implementing the disabling/enabling
+        bot.privMsgf(msg.channel, "modules: %s",
+                modulesInfo.byValue.map!(a => a.name).joiner(", "));
+    }
+
+    @helpMsg("module commands <m-name> - lists commands from the given module")
+    @command("module commands") void moduleCmdsHandler(PrivMessage msg) {
+        import std.algorithm : joiner;
+        import std.array : split;
+
+        //TODO: make the args checking automatic
         auto args = msg.text.split(" ");
-        if (args.length < 2) {
-            bot.privMsg(msg.channel, helpMsg);
+        if (args.length < 3) {
             return;
         }
-
-        auto mName = args[1];
-        switch (mName) {
-        case "-help":
-            bot.privMsg(msg.channel, helpMsg);
-            break;
-        case "-list":
-            auto modules = modulesInfo.byKey.joiner(", ");
-            bot.privMsgf(msg.channel, "modules: %s", modules);
-            break;
-        default:
-            auto mInfo = args[1] in modulesInfo;
-            if (!mInfo) {
-                bot.privMsgf(msg.channel, "there is no %s module", args[1]);
-                return;
-            }
-
-            if (args.length == 2) {
-                bot.privMsgf(msg.channel, "%s: %s", (*mInfo).name, (*mInfo).descriprion);
-                return;
-            }
-
-            switch (args[2]) {
-            case "commands":
-                bot.privMsgf(msg.channel, "%s commands: %s", (*mInfo).name,
-                        (*mInfo).commands.map!(a => a.command));
-                break;
-            case "enable":
-            case "disable":
-                bot.privMsg(msg.channel, "not implemented yet 4Head");
-                break;
-            default:
-                bot.privMsg(msg.channel, helpMsg);
-            }
+        if (auto mInfo = args[2] in modulesInfo) {
+            bot.privMsgf(msg.channel, "commands from module %s: %s", args[2],
+                    (*mInfo).commands.joiner(", "));
+        }
+        else {
+            bot.privMsgf(msg.channel, "there is no %s module", args[2]);
         }
     }
 
-    @onMessage(MessageType.ping) void pingHandler(PingMessage) {
+    @helpMsg("module enable <m-name> - enables given module")
+    @command("module enable") void moduleEnableHandler(PrivMessage msg) {
+        bot.privMsg(msg.channel, "not implemented yet 4Head");
+    }
+
+    @helpMsg("module disable <m-name> - disables given module")
+    @command("module disable") void moduleDisableHandler(PrivMessage msg) {
+        bot.privMsg(msg.channel, "not implemented yet 4Head");
+    }
+
+    @helpMsg(`basic module management command, "module <commands|enable|disable> <m-name>"`)
+    @command("module") void modulesHandler(PrivMessage msg) {
+        //this only exists for the help message xd
+    }
+
+    @on(MessageType.ping) void pingHandler(PingMessage) {
         bot.write("PONG :tmi.twitch.tv");
     }
 
-    @onMessage(MessageType.unknown) void printUnknownMessages(UnknownMessage msg) {
+    @on(MessageType.unknown) void printUnknownMessages(UnknownMessage msg) {
         import std.stdio : writeln;
 
         writeln(msg.rawLine);
     }
 }
 
-@moduleName("example") @description("example NaM module")
+@moduleName("example")
 public class ExampleModule {
     Bot bot;
     this(Bot b) {
         bot = b;
     }
 
-    @description("replies with NaM")
-    @onMessage(MessageType.privmsg) @command("test") void exampleHandler(PrivMessage msg) {
+    @helpMsg("replies with NaM")
+    @command("test") void exampleHandler(PrivMessage msg) {
         bot.reply(msg.channel, msg.source, "NaM");
     }
 
-    @onMessage(MessageType.privmsg) @contains("NaM") void exampleHandler2(PrivMessage msg) {
+    @contains("NaM") void exampleHandler2(PrivMessage msg) {
         bot.privMsg(msg.channel, "NaM");
     }
 
-    @onMessage(MessageType.privmsg) @always() void exampleHandler3(PrivMessage msg, ref bool stop) {
+    @always void exampleHandler3(PrivMessage msg, ref bool stop) {
         import std.stdio : writeln;
 
         writeln(msg);

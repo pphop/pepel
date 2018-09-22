@@ -7,6 +7,6 @@
 	"copyright": "Copyright © 2018, pphop",
 	"license": "proprietary",
 	"dependencies": {
-		"vibe-d": "~>0.8.4"
+		"vibe-d:data": "~>0.8.4"
 	}
 }

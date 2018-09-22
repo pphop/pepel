@@ -1,20 +1,30 @@
 module pepel.bot;
 
-import vibe.core.net, vibe.stream.operations;
+import std.socket;
 
 import pepel.config, pepel.message;
 
+//TODO: take the socket internals outside of Bot
 class Bot {
     import std.traits : EnumMembers, isSomeString;
 
     Config config;
-    private TCPConnection conn;
+    private TcpSocket socket;
+    private char[4096] buf;
+    private char[] buf2;
+    private bool running;
 
     this(Config cfg) {
+        config = cfg;
+        socket = new TcpSocket();
+    }
+
+    void connect() {
         import std.format : format;
 
-        config = cfg;
-        conn = connectTCP("irc.chat.twitch.tv", 6667u);
+        running = true;
+        socket.connect(new InternetAddress("irc.chat.twitch.tv", 6667u));
+
         string[] toWrite;
         toWrite ~= format!"PASS oauth:%s"(config.twitch.token);
         toWrite ~= format!"NICK %s"(config.twitch.username);
@@ -28,28 +38,47 @@ class Bot {
     void listen() {
         import std.variant : visit;
 
-        while (conn.waitForData()) {
-            auto raw = cast(string) conn.readLine;
+        //its always running rn
+        while (running) {
+            auto raw = readLine();
             auto message = parseMessage(raw);
             message.visit!(msg => handleMessage(msg));
         }
     }
 
     void close() {
-        conn.close();
+        socket.close();
     }
 
-    void joinChannel(string channel) {
-        config.addChannel(channel);
-        writef("JOIN #%s", channel); //todo: dont send JOIN if already joined and notify the caller
+    //TODO: handle the disconnect
+    string readLine() {
+        import std.algorithm : endsWith;
+        import std.array : empty, front;
+        import std.string : chomp, splitLines;
+
+        if (!buf2.empty) {
+            auto lines = buf2.splitLines();
+            if (lines.length > 1) {
+                auto line = lines.front;
+                buf2 = buf2[line.length + 2 .. $];
+                return line.idup;
+            }
+            else if (buf2.endsWith("\r\n")) {
+                auto line = buf2.chomp;
+                buf2 = null;
+                return line.idup;
+            }
+        }
+        auto received = socket.receive(buf[]);
+        buf2 ~= buf[0 .. received];
+        return readLine();
     }
 
     void write(S)(S str)
             if (isSomeString!S) {
         import std.format : format;
 
-        conn.write(format!"%s\r\n"(str));
-        conn.flush();
+        socket.send(format!"%s\r\n"(str));
     }
 
     void write(S)(S[] strs)
@@ -88,6 +117,11 @@ class Bot {
         import std.format : format;
 
         reply(channel, username, format(fmt, args));
+    }
+
+    void joinChannel(string channel) {
+        config.addChannel(channel);
+        writef("JOIN #%s", channel); //todo: dont send JOIN if already joined and notify the caller
     }
 
     static foreach (msgType; EnumMembers!MessageType) {

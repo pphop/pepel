@@ -55,18 +55,24 @@ struct PingMessage {
     string rawLine;
 }
 
+//TODO: move somewhere
+enum UserLevel {
+    regularUser,
+    moderator,
+    broadcaster
+}
+
 struct PrivMessage {
     import std.regex : regex;
 
     string channel;
-    string source;
+    string username;
     string text;
     string rawLine;
 
-    // maybe move to some kind of user eShrug
+    //TODO: make it so parseTags fills lvl too
+    UserLevel userLvl;
     @tag("display-name") string displayName;
-    @tag("mod") bool isMod;
-    @tag("sub") bool isSub;
 
     private static regex_ = regex(r"^(?:@(?P<tags>[^ ]+) +)?(?::(?P<username>\w+)[^ ]+ +)?(?P<msgtype>[A-Z]+) +(?:#(?P<channel>[^ ]+) )?(?::(?P<content>.+))$");
 
@@ -77,7 +83,7 @@ struct PrivMessage {
         auto matched = rawLine.matchFirst(regex_);
         if (matched) {
             parseTags(this, matched["tags"]);
-            source = matched["username"];
+            username = matched["username"];
             channel = matched["channel"];
             text = matched["content"];
         }
@@ -93,8 +99,8 @@ struct PrivMessage {
 private alias Tuple(T...) = T;
 
 private void parseTags(T)(ref T toFill, string str) {
-    import std.array : split;
-    import std.algorithm : each, map;
+    import std.array : front, split;
+    import std.algorithm : each, map, max;
     import std.conv : to;
     import std.traits : getSymbolsByUDA, getUDAs;
 
@@ -111,6 +117,19 @@ private void parseTags(T)(ref T toFill, string str) {
             }
             else {
                 mixin("toFill." ~ member.stringof) = (*value).to!memberType;
+            }
+        }
+    }
+
+    //TODO: redo
+    auto badges = "badges" in tagValues;
+    if (badges) {
+        foreach (badge; (*badges).split(",").map!(a => a.split("/").front)) {
+            if (badge == "broadcaster") {
+                toFill.userLvl = max(toFill.userLvl, UserLevel.broadcaster);
+            }
+            else if (badge == "moderator") {
+                toFill.userLvl = max(toFill.userLvl, UserLevel.moderator);
             }
         }
     }

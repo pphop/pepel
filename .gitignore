@@ -15,5 +15,6 @@ pepel-test-*
 
 dub.selections.json
 *.dll
+*.lib
 # config file
 monkas.json

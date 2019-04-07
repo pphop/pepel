@@ -3,16 +3,16 @@ module pepel.config;
 struct Config {
     import vibe.data.json : ignore, name;
 
-    TwitchCfg twitch;
-    @name("command_prefix") string cmdPrefix;
-    @ignore string configPath;
-
-    struct TwitchCfg {
+    struct Twitch {
         string username;
         string token;
         string owner;
         string[] channels;
     }
+
+    Twitch twitch;
+    @name("command_prefix") string cmdPrefix;
+    private @ignore string _configPath;
 
     this(string path) {
         import std.file : read;
@@ -22,7 +22,7 @@ struct Config {
 
         this = read(path).to!string
             .deserializeJson!Config;
-        configPath = path;
+        _configPath = path;
     }
 
     void addChannel(string channel) {
@@ -47,6 +47,6 @@ struct Config {
         }
 
         tmpfile.write(this.serializeToPrettyJson());
-        tmpfile.rename(configPath);
+        tmpfile.rename(_configPath);
     }
 }

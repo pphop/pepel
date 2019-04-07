@@ -17,7 +17,8 @@ abstract class Module {
         bool isTriggered(Message msg) {
             import std.algorithm : startsWith;
 
-            return msg.text.startsWith(prefix) && msg.text[prefix.length .. $].startsWith(trigger);
+            return msg.sender.role >= reqRole && msg.text.startsWith(prefix)
+                && msg.text[prefix.length .. $].startsWith(trigger);
         }
     }
 

@@ -31,6 +31,8 @@ abstract class Module {
     }
 
 protected:
+    // for convenience in derrived modules
+    alias nr = Nullable!Response;
 
     // the meme to register commands with generateCommands mixin
     void _registerGeneratedCommands();
@@ -40,8 +42,6 @@ protected:
     }
 
 public:
-    // for convenience in derrived modules
-    alias nr = Nullable!Response;
 
     final Response[] onMessage(Message msg) {
         Response[] res;
@@ -91,8 +91,7 @@ template generateCommands(T) {
 
         return q{
             protected override void _registerGeneratedCommands() {
-                Command[] cmds = [%s];
-                registerCommands(cmds);
+                registerCommands([%s]);
             }}.format([staticMap!(commandString,
                 Filter!(hasTriggerUDA, AliasSeq!(__traits(allMembers, T))))].joiner(", "));
 

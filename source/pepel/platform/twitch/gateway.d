@@ -36,7 +36,7 @@ public:
         }
     }
 
-    void onPrivMsg(IRCMessage msg) {
+    private void onPrivMsg(IRCMessage msg) {
         _onMessage(msg.toMsg(_cfg.owner, _cfg.username));
     }
 }

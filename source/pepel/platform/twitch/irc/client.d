@@ -37,7 +37,7 @@ public:
 
                 switch (msg.type) {
                 case IRCMessage.Type.privmsg:
-                    _onPrivMsg(msg);
+                    runTask({ _onPrivMsg(msg); });
                     break;
                 case IRCMessage.Type.ping:
                     write("PONG :%s".format(msg.raw.findSplitAfter(" ")[1]));

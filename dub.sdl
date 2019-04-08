@@ -5,3 +5,4 @@ copyright "Copyright © 2018, pphop"
 license "proprietary"
 
 dependency "vibe-d:http" version="~>0.8.6-alpha.1"
+dependency "discord-w" version="~>0.0.3"

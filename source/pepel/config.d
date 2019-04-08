@@ -10,7 +10,13 @@ struct Config {
         string[] channels;
     }
 
+    struct Discord {
+        string token;
+        ulong ownerID;
+    }
+
     Twitch twitch;
+    Discord discord;
     @name("command_prefix") string cmdPrefix;
     private @ignore string _configPath;
 

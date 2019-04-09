@@ -9,9 +9,6 @@ import pepel.common, pepel.config;
 import pepel.platform.discord.message, pepel.platform.discord.user;
 
 class DiscordGateway : Gateway {
-
-    mixin onMessageProperty;
-
 private:
 
     class G : discord.w.DiscordGateway {

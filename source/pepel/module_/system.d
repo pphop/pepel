@@ -5,7 +5,9 @@ import pepel.module_.module_;
 
 class SystemModule : Module {
 
-    mixin(generateCommands!SystemModule);
+    this() {
+        mixin(generateCommands!SystemModule);
+    }
 
     @trigger("ping") nr ping(Message) {
         return nr(Response("pong"));

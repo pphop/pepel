@@ -26,16 +26,9 @@ abstract class Module {
     private string _defaultPrefix;
     protected bool _disabled;
 
-    protected this() {
-        _registerGeneratedCommands();
-    }
-
 protected:
     // for convenience in derrived modules
     alias nr = Nullable!Response;
-
-    // the meme to register commands with generateCommands mixin
-    void _registerGeneratedCommands();
 
     final void registerCommands(Command[] cmds) {
         _commands ~= cmds;
@@ -89,10 +82,7 @@ template generateCommands(T) {
 
         enum hasTriggerUDA(string member) = hasUDA!(__traits(getMember, T, member), trigger);
 
-        return q{
-            protected override void _registerGeneratedCommands() {
-                registerCommands([%s]);
-            }}.format([staticMap!(commandString,
+        return "registerCommands([%s]);".format([staticMap!(commandString,
                 Filter!(hasTriggerUDA, AliasSeq!(__traits(allMembers, T))))].joiner(", "));
 
     }

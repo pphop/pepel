@@ -4,9 +4,6 @@ import pepel.config, pepel.common;
 import pepel.platform.twitch.irc, pepel.platform.twitch.message, pepel.platform.twitch.user;
 
 final class TwitchGateway : Gateway {
-
-    mixin onMessageProperty;
-
 private:
     IRCClient _irc;
     Config.Twitch _cfg;

@@ -2,18 +2,19 @@ module pepel.main;
 
 import vibe.core.core;
 
-import pepel.bot, pepel.config, pepel.module_, pepel.platform.twitch.gateway;
+import pepel.bot, pepel.config;
 import pepel.module_.system;
+import pepel.platform.discord.gateway;
+import pepel.platform.twitch.gateway;
 
 void main() {
     auto cfg = Config("monkas.json");
 
-    auto twitchGateway = new TwitchGateway(cfg.twitch);
-    auto twitchBot = new Bot(twitchGateway, cfg);
+    auto twitchBot = new Bot(new TwitchGateway(cfg.twitch), cfg);
     twitchBot.registerModules([new SystemModule()]);
 
-    //auto discordGateway = new DiscordGateway(cfg.discord);
-    //auto discordBot = new Bot(discorGateway, cfg);
-    //discordBot.registerModules();
+    auto discordBot = new Bot(new DiscordGateway(cfg.discord), cfg);
+    discordBot.registerModules([new SystemModule()]);
+
     runApplication();
 }

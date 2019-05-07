@@ -7,14 +7,21 @@ import pepel.module_.system;
 import pepel.platform.discord.gateway;
 import pepel.platform.twitch.gateway;
 
-void main() {
-    auto cfg = Config("monkas.json");
+version (unittest) {
+    void main() {
+    }
+}
+else {
 
-    auto twitchBot = new Bot(new TwitchGateway(cfg.twitch), cfg);
-    twitchBot.registerModules([new SystemModule()]);
+    void main() {
+        auto cfg = Config("monkas.json");
 
-    auto discordBot = new Bot(new DiscordGateway(cfg.discord), cfg);
-    discordBot.registerModules([new SystemModule()]);
+        auto twitchBot = new Bot(new TwitchGateway(cfg.twitch), cfg);
+        twitchBot.registerModules([new SystemModule()]);
 
-    runApplication();
+        auto discordBot = new Bot(new DiscordGateway(cfg.discord), cfg);
+        discordBot.registerModules([new SystemModule()]);
+
+        runApplication();
+    }
 }

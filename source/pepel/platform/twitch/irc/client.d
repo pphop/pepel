@@ -5,6 +5,9 @@ import vibe.core.net;
 import vibe.stream.operations;
 
 import pepel.platform.twitch.irc.message;
+import pepel.platform.twitch.irc.ratelimitter;
+
+private RateLimitter rateLimitter;
 
 struct IRCClient {
 private:
@@ -27,7 +30,6 @@ public:
         write("PASS oauth:%s".format(_token));
         write("NICK %s".format(_username));
         write("CAP REQ :twitch.tv/tags");
-        flush();
 
         runTask({
             // TODO: handle disconnect
@@ -55,12 +57,10 @@ public:
     void join(string[] channels) {
         foreach (channel; channels)
             write("JOIN #%s".format(channel));
-        flush();
     }
 
     void privMsg(string channel, string text) {
         write("PRIVMSG #%s :%s".format(channel, text));
-        flush();
     }
 
     void whisper(string username, string text) {
@@ -69,7 +69,9 @@ public:
 
 private:
     void write(string s) {
+        rateLimitter.wait();
         _conn.write("%s\r\n".format(s));
+        flush();
     }
 
     void flush() {

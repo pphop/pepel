@@ -1,7 +1,5 @@
 module pepel.platform.discord.gateway;
 
-import std.stdio : writeln;
-
 static import discord.w;
 import vibe.core.core;
 
@@ -13,6 +11,9 @@ private:
 
     class G : discord.w.DiscordGateway {
 
+        discord.w.Channel[discord.w.Snowflake] channelCache;
+        discord.w.Guild[discord.w.Snowflake] guildCache;
+
         this(string token) {
             super(token);
         }
@@ -20,7 +21,16 @@ private:
         @trusted override void onMessageCreate(discord.w.Message msg) {
             super.onMessageCreate(msg);
 
-            writeln(msg.content);
+            //TODO: proper logging
+            import std.stdio : writefln;
+
+            auto channel = channelCache.require(msg.channel_id,
+                    discord.w.ChannelAPI(msg.channel_id, discord.w.authBot(_cfg.token)).get());
+            auto guild = guildCache.require(channel.guild_id,
+                    discord.w.GuildAPI(channel.guild_id, discord.w.authBot(_cfg.token)).get());
+
+            writefln("Discord #%s:%s @%s: %s", guild.name,
+                    channel.name.get("???"), msg.author.username, msg.content);
 
             if (msg.author.id == info.user.id)
                 return;

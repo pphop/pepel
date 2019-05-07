@@ -56,11 +56,12 @@ public:
         return res;
     }
 
-    // TODO: make it less scuffed
     @property void defaultPrefix(string prefix) {
-        _defaultPrefix = prefix;
         foreach (ref cmd; _commands)
-            cmd.prefix = prefix;
+            if (cmd.prefix == _defaultPrefix)
+                cmd.prefix = prefix;
+
+        _defaultPrefix = prefix;
     }
 }
 

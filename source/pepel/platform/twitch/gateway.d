@@ -34,6 +34,11 @@ public:
     }
 
     private void onPrivMsg(IRCMessage msg) {
+        // TODO: proper logging
+        import std.stdio : writefln;
+
+        writefln("Twitch #%s @%s: %s", msg.channel, msg.user.displayName, msg.text);
+
         _onMessage(msg.toMsg(_cfg.owner, _cfg.username));
     }
 }

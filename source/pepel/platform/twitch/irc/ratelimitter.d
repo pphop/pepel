@@ -8,7 +8,7 @@ import vibe.core.core;
 struct RateLimitter {
 private:
     long lastAccess;
-    static Duration repeat = (cast(long)(20.0f / 30.0f * 1000.0f)).msecs;
+    static Duration repeat = (cast(long)(30.0f / 20.0f * 1000.0f)).msecs;
 
 public:
     void wait() {

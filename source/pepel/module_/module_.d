@@ -23,15 +23,20 @@ abstract class Module {
     }
 
     private Command[] _commands;
+    private Command.Handler[] _onEveryMsgHandlers;
     private string _defaultPrefix;
     protected bool _disabled;
 
 protected:
     // for convenience in derrived modules
-    alias nr = Nullable!Response;
+    alias NR = Nullable!Response;
 
     final void registerCommands(Command[] cmds) {
         _commands ~= cmds;
+    }
+
+    final void registerOnEveryMsgHandlers(Command.Handler[] hs) {
+        _onEveryMsgHandlers ~= hs;
     }
 
 public:
@@ -40,6 +45,20 @@ public:
         Response[] res;
 
         if (_disabled)
+            return res;
+
+        // TODO: make this less scuffed
+
+        foreach (h; _onEveryMsgHandlers) {
+            auto resp = h(msg);
+            if (!resp.isNull)
+                res ~= resp.get();
+
+            if (msg.handled)
+                break;
+        }
+
+        if (msg.handled)
             return res;
 
         foreach (c; _commands) {
@@ -58,7 +77,7 @@ public:
 
     @property void defaultPrefix(string prefix) {
         foreach (ref cmd; _commands)
-            if (cmd.prefix == _defaultPrefix)
+            if (cmd.prefix is _defaultPrefix)
                 cmd.prefix = prefix;
 
         _defaultPrefix = prefix;
@@ -67,8 +86,8 @@ public:
 
 // UDAS
 // dfmt off
-struct trigger { string trigger; }
-struct reqRole { User.Role role; }
+enum onEveryMsg;
+struct command { string trigger; User.Role reqRole; }
 // dfmt on
 
 template generateCommands(T) {
@@ -81,26 +100,29 @@ template generateCommands(T) {
         import std.meta : AliasSeq, Filter, staticMap;
         import std.traits : hasUDA;
 
-        enum hasTriggerUDA(string member) = hasUDA!(__traits(getMember, T, member), trigger);
+        enum hasCommandUDA(string member) = hasUDA!(__traits(getMember, T, member), command);
+        enum hasOnEveryMsgUDA(string member) = hasUDA!(__traits(getMember, T, member), onEveryMsg);
 
-        return "registerCommands([%s]);".format([staticMap!(commandString,
-                Filter!(hasTriggerUDA, AliasSeq!(__traits(allMembers, T))))].joiner(", "));
+        string res;
+
+        res ~= "registerOnEveryMsgHandlers([%s]);\n".format(["workaround",
+                Filter!(hasOnEveryMsgUDA, AliasSeq!(__traits(allMembers, T)))][1 .. $].map!(a => "&" ~ a)
+                .joiner(", "));
+
+        res ~= "registerCommands([%s]);".format([staticMap!(commandString,
+                Filter!(hasCommandUDA, AliasSeq!(__traits(allMembers, T))))].joiner(", "));
+
+        return res;
 
     }
 
     string commandString(string member)() {
-        import std.conv : text;
         import std.format : format;
-        import std.traits : getUDAs, hasUDA;
+        import std.traits : getUDAs;
 
-        auto trigger = getUDAs!(__traits(getMember, T, member), trigger)[0].trigger;
-        string role;
+        auto command = getUDAs!(__traits(getMember, T, member), command)[0];
 
-        static if (hasUDA!(__traits(getMember, T, member), reqRole))
-            role = getUDAs!(__traits(getMember, T, member), reqRole)[0].role.text;
-        else
-            role = "pleb";
-
-        return `Command("", "%s", User.Role.%s, &%s)`.format(trigger, role, member);
+        return `Command(null, "%s", User.Role.%s, &%s)`.format(command.trigger,
+                command.reqRole, member);
     }
 }

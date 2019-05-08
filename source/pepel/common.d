@@ -1,14 +1,14 @@
 module pepel.common;
 
 abstract class Gateway {
-    protected void delegate(Message) _onMessage;
+    protected void delegate(ref Message) _onMessage;
 
-    @property final void onMessage(void delegate(Message) hand) {
+    @property final void onMessage(void delegate(ref Message) hand) {
         _onMessage = hand;
     }
 
     void connect();
-    void reply(Message, Response);
+    void reply(ref Message, Response);
 
     /*
     void join(string meme);
@@ -26,18 +26,22 @@ struct Response {
     Type type;
 }
 
-abstract class Message {
+struct Message {
     User sender;
+    Channel channel;
     string text;
     bool handled;
     bool mentionedBot;
 
-    final @property string[] args() {
+    @property string[] args() {
         import std.string : split;
 
         return text.split;
     }
+}
 
+abstract class Channel {
+    @property string id();
 }
 
 abstract class User {
@@ -51,5 +55,7 @@ abstract class User {
 
     Role role;
     string username;
+
+    @property string id();
     string mention();
 }

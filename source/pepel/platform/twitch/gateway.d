@@ -1,7 +1,8 @@
 module pepel.platform.twitch.gateway;
 
 import pepel.config, pepel.common;
-import pepel.platform.twitch.irc, pepel.platform.twitch.message, pepel.platform.twitch.user;
+import pepel.platform.twitch.irc;
+import pepel.platform.twitch.types;
 
 final class TwitchGateway : Gateway {
 private:
@@ -19,13 +20,10 @@ public:
         _irc.join(_cfg.channels);
     }
 
-    override void reply(Message m, Response res) {
-        // there has to be a better way
-        auto msg = cast(TwitchMessage) m;
-
+    override void reply(ref Message msg, Response res) {
         final switch (res.type) {
         case Response.Type.chatroom:
-            _irc.privMsg(msg.channel, res.text);
+            _irc.privMsg(msg.channel.id, res.text);
             break;
         case Response.Type.dm:
             _irc.whisper(msg.sender.username, res.text);
@@ -39,38 +37,41 @@ public:
 
         writefln("Twitch #%s @%s: %s", msg.channel, msg.user.displayName, msg.text);
 
-        _onMessage(msg.toMsg(_cfg.owner, _cfg.username));
+        auto m = msg.toMsg(_cfg.owner, _cfg.username);
+        _onMessage(m);
     }
 }
 
-private TwitchMessage toMsg(IRCMessage ircMsg, string botowner, string username) {
+private Message toMsg(IRCMessage ircMsg, string botowner, string username) {
     import std.algorithm : canFind;
 
-    auto msg = new TwitchMessage();
-    msg.text = ircMsg.text;
-    msg.channel = ircMsg.channel;
+    auto msg = Message();
 
     msg.sender = new TwitchUser();
-    msg.sender.username = ircMsg.user.displayName;
-    final switch (ircMsg.user.type) {
-    case IRCMessage.User.Type.pleb:
-        break;
-    case IRCMessage.User.Type.subscriber:
-        msg.sender.role = User.Role.privileged;
-        break;
-    case IRCMessage.User.Type.moderator:
-        msg.sender.role = User.Role.moderator;
-        break;
-    case IRCMessage.User.Type.broadcaster:
-        msg.sender.role = User.Role.moderator;
-        break;
+
+    if (ircMsg.user.username == botowner) {
+        msg.sender.role = User.Role.botowner;
+    }
+    else {
+        final switch (ircMsg.user.type) {
+        case IRCMessage.User.Type.pleb:
+            break;
+        case IRCMessage.User.Type.subscriber:
+            msg.sender.role = User.Role.privileged;
+            break;
+        case IRCMessage.User.Type.moderator:
+            msg.sender.role = User.Role.moderator;
+            break;
+        case IRCMessage.User.Type.broadcaster:
+            msg.sender.role = User.Role.moderator;
+            break;
+        }
     }
 
-    if (ircMsg.user.username == botowner)
-        msg.sender.role = User.Role.botowner;
-
-    if (msg.text.canFind(username))
-        msg.mentionedBot = true;
+    msg.sender.username = ircMsg.user.username;
+    msg.channel = new TwitchChannel(ircMsg.channel);
+    msg.text = ircMsg.text;
+    msg.mentionedBot = ircMsg.text.canFind(username);
 
     return msg;
 }

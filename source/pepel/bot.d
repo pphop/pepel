@@ -22,7 +22,7 @@ public:
         _modules ~= modules;
     }
 
-    void onMessage(Message msg) {
+    void onMessage(ref Message msg) {
         foreach (m; _modules) {
             auto responses = m.onMessage(msg);
             foreach (resp; responses)

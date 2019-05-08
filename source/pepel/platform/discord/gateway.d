@@ -4,7 +4,7 @@ static import discord.w;
 import vibe.core.core;
 
 import pepel.common, pepel.config;
-import pepel.platform.discord.message, pepel.platform.discord.user;
+import pepel.platform.discord.types;
 
 class DiscordGateway : Gateway {
 private:
@@ -25,9 +25,9 @@ private:
             import std.stdio : writefln;
 
             auto channel = channelCache.require(msg.channel_id,
-                    discord.w.ChannelAPI(msg.channel_id, discord.w.authBot(_cfg.token)).get());
+                    _gateway.channel(msg.channel_id).get());
             auto guild = guildCache.require(channel.guild_id,
-                    discord.w.GuildAPI(channel.guild_id, discord.w.authBot(_cfg.token)).get());
+                    _gateway.guild(channel.guild_id).get());
 
             writefln("Discord #%s:%s @%s: %s", guild.name,
                     channel.name.get("???"), msg.author.username, msg.content);
@@ -38,7 +38,8 @@ private:
             if (msg.author.bot)
                 return;
 
-            _onMessage(msg.toMsg(_cfg));
+            auto m = msg.toMsg(_cfg);
+            _onMessage(m);
         }
     }
 
@@ -54,12 +55,12 @@ public:
         _gateway = discord.w.makeBot(_cfg.token, this.new G(_cfg.token));
     }
 
-    override void reply(Message m, Response resp) {
-        auto msg = cast(DiscordMessage) m;
+    override void reply(ref Message msg, Response resp) {
 
         final switch (resp.type) {
         case Response.Type.chatroom:
-            _gateway.channel(msg.channelID).sendMessage(resp.text);
+            // TODO: think of a way to prevent this(converting id from ulong to string and back)
+            _gateway.channel(discord.w.Snowflake.fromString(msg.channel.id)).sendMessage(resp.text);
             break;
         case Response.Type.dm:
             // TODO
@@ -68,24 +69,19 @@ public:
     }
 }
 
-@safe private DiscordMessage toMsg(discord.w.Message dMsg, Config.Discord cfg) {
+private Message toMsg(discord.w.Message dMsg, Config.Discord cfg) {
     import std.algorithm : canFind;
 
-    auto msg = new DiscordMessage();
-    msg.text = dMsg.content;
-    msg.channelID = dMsg.channel_id;
+    auto msg = Message();
 
+    msg.sender = new DiscordUser(dMsg.author.id);
     // TODO: user roles
-    auto sender = new DiscordUser();
-    sender.username = dMsg.author.username;
-    sender.id = dMsg.author.id;
-    msg.sender = sender;
-
-    if (dMsg.author.id == discord.w.Snowflake(cfg.ownerID))
-        msg.sender.role = User.Role.botowner;
-
-    if (dMsg.mentions.canFind!((a, b) => a.id == b)(discord.w.Snowflake(cfg.ownerID)))
-        msg.mentionedBot = true;
+    msg.sender.role = dMsg.author.id == discord.w.Snowflake(cfg.ownerID)
+        ? User.Role.botowner : User.Role.pleb;
+    msg.sender.username = dMsg.author.username;
+    msg.channel = new DiscordChannel(dMsg.channel_id);
+    msg.text = dMsg.content;
+    msg.mentionedBot = dMsg.mentions.canFind!((a, b) => a.id == b)(discord.w.Snowflake(cfg.ownerID));
 
     return msg;
 }

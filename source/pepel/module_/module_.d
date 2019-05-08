@@ -7,7 +7,7 @@ import pepel.common;
 abstract class Module {
 
     struct Command {
-        alias Handler = Nullable!Response delegate(Message);
+        alias Handler = Nullable!Response delegate(ref Message);
 
         string prefix;
         string trigger;

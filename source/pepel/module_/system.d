@@ -9,11 +9,11 @@ class SystemModule : Module {
         mixin(generateCommands!SystemModule);
     }
 
-    @command("ping") NR ping(Message) {
+    @command("ping") NR ping(ref Message) {
         return NR(Response("pong"));
     }
 
-    @command("test", User.Role.moderator) NR test(Message) {
+    @command("test", User.Role.moderator) NR test(ref Message) {
         return NR(Response("you are a mod pog"));
     }
 }

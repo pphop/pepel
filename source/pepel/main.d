@@ -16,11 +16,15 @@ else {
     void main() {
         auto cfg = Config("monkas.json");
 
-        auto twitchBot = new Bot(new TwitchGateway(cfg.twitch), cfg);
+        auto twitchBot = Bot(new TwitchGateway(cfg.twitch), cfg);
         twitchBot.registerModules([new SystemModule()]);
+        scope (exit)
+            twitchBot.closeConnection();
 
-        auto discordBot = new Bot(new DiscordGateway(cfg.discord), cfg);
+        auto discordBot = Bot(new DiscordGateway(cfg.discord), cfg);
         discordBot.registerModules([new SystemModule()]);
+        scope (exit)
+            discordBot.closeConnection();
 
         runApplication();
     }

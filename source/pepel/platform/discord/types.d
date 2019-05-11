@@ -18,6 +18,7 @@ final class DiscordChannel : Channel {
 }
 
 final class DiscordUser : User {
+
     Snowflake _id;
 
     this(Snowflake id) {

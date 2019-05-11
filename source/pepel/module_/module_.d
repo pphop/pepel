@@ -6,40 +6,25 @@ import pepel.common;
 
 abstract class Module {
 
-    struct Command {
-        alias Handler = Nullable!Response delegate(ref Message);
+    alias NR = Nullable!Response;
 
-        string prefix;
+    struct Command {
+        alias Handler = NR delegate(ref Message);
+
+        string channel;
         string trigger;
         User.Role reqRole;
         Handler handler;
-
-        bool isTriggered(Message msg) {
-            import std.algorithm : startsWith;
-
-            return msg.sender.role >= reqRole && msg.text.startsWith(prefix)
-                && msg.text[prefix.length .. $].startsWith(trigger);
-        }
     }
-
-    private Command[] _commands;
-    private Command.Handler[] _onEveryMsgHandlers;
-    private string _defaultPrefix;
-    protected bool _disabled;
 
 protected:
-    // for convenience in derrived modules
-    alias NR = Nullable!Response;
-
-    final void registerCommands(Command[] cmds) {
-        _commands ~= cmds;
-    }
-
-    final void registerOnEveryMsgHandlers(Command.Handler[] hs) {
-        _onEveryMsgHandlers ~= hs;
-    }
+    Command[] _commands;
+    Command.Handler[] _onEveryMsgHandlers;
+    bool _disabled;
 
 public:
+
+    string prefix;
 
     final Response[] onMessage(Message msg) {
         Response[] res;
@@ -62,7 +47,7 @@ public:
             return res;
 
         foreach (c; _commands) {
-            if (c.isTriggered(msg)) {
+            if (isTriggered(c, msg)) {
                 auto resp = c.handler(msg);
                 if (!resp.isNull)
                     res ~= resp.get();
@@ -75,12 +60,28 @@ public:
         return res;
     }
 
-    @property void defaultPrefix(string prefix) {
-        foreach (ref cmd; _commands)
-            if (cmd.prefix is _defaultPrefix)
-                cmd.prefix = prefix;
+protected:
 
-        _defaultPrefix = prefix;
+    final void registerCommands(Command[] cmds) {
+        _commands ~= cmds;
+    }
+
+    final void registerOnEveryMsgHandlers(Command.Handler[] hs) {
+        _onEveryMsgHandlers ~= hs;
+    }
+
+private:
+
+    bool isTriggered(ref Command cmd, ref Message msg) {
+        import std.algorithm : startsWith;
+
+        // NotLikeThis
+        // dfmt off
+        return msg.sender.role >= cmd.reqRole
+            && (cmd.channel == "" || cmd.channel == msg.channel.id)
+            && msg.text.startsWith(prefix)
+            && msg.text[prefix.length .. $].startsWith(cmd.trigger);
+        // dfmt on
     }
 }
 
@@ -122,7 +123,7 @@ template generateCommands(T) {
 
         auto command = getUDAs!(__traits(getMember, T, member), command)[0];
 
-        return `Command(null, "%s", User.Role.%s, &%s)`.format(command.trigger,
-                command.reqRole, member);
+        return `Command("", "%s", User.Role.%s, &%s)`.format(command.trigger,
+                command.reqRole == User.Role.none ? User.Role.pleb : command.reqRole, member);
     }
 }

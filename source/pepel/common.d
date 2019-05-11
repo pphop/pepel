@@ -8,6 +8,7 @@ abstract class Gateway {
     }
 
     void connect();
+    void close();
     void reply(ref Message, Response);
 
     /*
@@ -46,6 +47,7 @@ abstract class Channel {
 
 abstract class User {
     enum Role {
+        none,
         pleb,
         trusted,
         privileged,

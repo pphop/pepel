@@ -3,6 +3,7 @@ module pepel.platform.twitch.irc.message;
 import std.regex;
 
 struct IRCMessage {
+
     enum Type {
         unknown,
         privmsg,

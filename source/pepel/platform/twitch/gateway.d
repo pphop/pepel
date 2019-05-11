@@ -16,8 +16,11 @@ public:
     }
 
     override void connect() {
-        _irc.connect(_cfg.username, _cfg.token);
-        _irc.join(_cfg.channels);
+        _irc.connect(_cfg);
+    }
+
+    override void close() {
+        _irc.close();
     }
 
     override void reply(ref Message msg, Response res) {
@@ -60,8 +63,6 @@ private Message toMsg(IRCMessage ircMsg, string botowner, string username) {
             msg.sender.role = User.Role.privileged;
             break;
         case IRCMessage.User.Type.moderator:
-            msg.sender.role = User.Role.moderator;
-            break;
         case IRCMessage.User.Type.broadcaster:
             msg.sender.role = User.Role.moderator;
             break;

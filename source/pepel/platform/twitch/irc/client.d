@@ -4,6 +4,7 @@ import vibe.core.core;
 import vibe.core.net;
 import vibe.stream.operations;
 
+import pepel.config;
 import pepel.platform.twitch.irc.message;
 import pepel.platform.twitch.irc.ratelimitter;
 
@@ -20,18 +21,20 @@ public:
         _onPrivMsg = handler;
     }
 
-    void connect(string username, string token) {
+    void connect(Config.Twitch cfg) {
         import std.algorithm : findSplitAfter;
         import std.format : format;
 
-        _username = username;
-        _token = token;
+        _username = cfg.username;
+        _token = cfg.token;
         _conn = connectTCP("irc.chat.twitch.tv", 6667u);
-        write("PASS oauth:%s".format(_token));
-        write("NICK %s".format(_username));
-        write("CAP REQ :twitch.tv/tags");
 
         runTask({
+            write("PASS oauth:%s".format(_token));
+            write("NICK %s".format(_username));
+            write("CAP REQ :twitch.tv/tags");
+            join(cfg.channels);
+
             // TODO: handle disconnect
             while (_conn.connected && _conn.waitForData) {
                 auto line = cast(string) _conn.readLine();
@@ -52,6 +55,10 @@ public:
                 }
             }
         });
+    }
+
+    void close() {
+        _conn.close();
     }
 
     void join(string[] channels) {

@@ -6,13 +6,10 @@ import vibe.core.core;
 import pepel.common, pepel.config;
 import pepel.platform.discord.types;
 
-class DiscordGateway : Gateway {
+final class DiscordGateway : Gateway {
 private:
 
     class G : discord.w.DiscordGateway {
-
-        discord.w.Channel[discord.w.Snowflake] channelCache;
-        discord.w.Guild[discord.w.Snowflake] guildCache;
 
         this(string token) {
             super(token);
@@ -24,10 +21,8 @@ private:
             //TODO: proper logging
             import std.stdio : writefln;
 
-            auto channel = channelCache.require(msg.channel_id,
-                    _gateway.channel(msg.channel_id).get());
-            auto guild = guildCache.require(channel.guild_id,
-                    _gateway.guild(channel.guild_id).get());
+            auto channel = discord.w.gChannelCache.get(msg.channel_id);
+            auto guild = discord.w.gGuildCache.get(channel.guild_id);
 
             writefln("Discord #%s:%s @%s: %s", guild.name,
                     channel.name.get("???"), msg.author.username, msg.content);
@@ -55,8 +50,11 @@ public:
         _gateway = discord.w.makeBot(_cfg.token, this.new G(_cfg.token));
     }
 
-    override void reply(ref Message msg, Response resp) {
+    override void close() {
+        _gateway.gateway.disconnect();
+    }
 
+    override void reply(ref Message msg, Response resp) {
         final switch (resp.type) {
         case Response.Type.chatroom:
             // TODO: think of a way to prevent this(converting id from ulong to string and back)

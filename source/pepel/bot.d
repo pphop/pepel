@@ -26,14 +26,16 @@ public:
         _modules ~= modules;
     }
 
-    void onMessage(ref Message msg) {
+    Response[] onMessage(ref Message msg) {
+        Response[] res;
+
         foreach (m; _modules) {
-            auto responses = m.onMessage(msg);
-            foreach (resp; responses)
-                _gateway.reply(msg, resp);
+            res ~= m.onMessage(msg);
 
             if (msg.handled)
                 break;
         }
+
+        return res;
     }
 }

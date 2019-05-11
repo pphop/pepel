@@ -34,7 +34,19 @@ private:
                 return;
 
             auto m = msg.toMsg(_cfg);
-            _onMessage(m);
+            auto responses = _onMessage(m);
+
+            foreach (resp; responses) {
+                final switch (resp.type) {
+                case Response.Type.chatroom:
+                    _gateway.channel(msg.channel_id)
+                        .sendMessage(resp.text);
+                    break;
+                case Response.Type.dm:
+                    // TODO
+                    break;
+                }
+            }
         }
     }
 
@@ -52,18 +64,6 @@ public:
 
     override void close() {
         _gateway.gateway.disconnect();
-    }
-
-    override void reply(ref Message msg, Response resp) {
-        final switch (resp.type) {
-        case Response.Type.chatroom:
-            // TODO: think of a way to prevent this(converting id from ulong to string and back)
-            _gateway.channel(discord.w.Snowflake.fromString(msg.channel.id)).sendMessage(resp.text);
-            break;
-        case Response.Type.dm:
-            // TODO
-            break;
-        }
     }
 }
 

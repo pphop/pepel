@@ -23,17 +23,6 @@ public:
         _irc.close();
     }
 
-    override void reply(ref Message msg, Response res) {
-        final switch (res.type) {
-        case Response.Type.chatroom:
-            _irc.privMsg(msg.channel.id, res.text);
-            break;
-        case Response.Type.dm:
-            _irc.whisper(msg.sender.username, res.text);
-            break;
-        }
-    }
-
     private void onPrivMsg(IRCMessage msg) {
         // TODO: proper logging
         import std.stdio : writefln;
@@ -41,7 +30,18 @@ public:
         writefln("Twitch #%s @%s: %s", msg.channel, msg.user.displayName, msg.text);
 
         auto m = msg.toMsg(_cfg.owner, _cfg.username);
-        _onMessage(m);
+        auto responses = _onMessage(m);
+
+        foreach (resp; responses) {
+            final switch (resp.type) {
+            case Response.Type.chatroom:
+                _irc.privMsg(msg.channel, resp.text);
+                break;
+            case Response.Type.dm:
+                _irc.whisper(msg.user.username, resp.text);
+                break;
+            }
+        }
     }
 }
 

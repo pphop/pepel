@@ -6,3 +6,6 @@ license "proprietary"
 
 dependency "vibe-d:http" version="==0.8.4"
 dependency "discord-w" version="~>0.0.3"
+dependency "d2sqlite3" version="~>0.18.1"
+
+subConfiguration "d2sqlite3" "all-included"

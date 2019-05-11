@@ -18,3 +18,4 @@ dub.selections.json
 *.lib
 # config file
 monkas.json
+pepel.db

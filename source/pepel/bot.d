@@ -6,9 +6,10 @@ struct Bot {
 private:
     Gateway _gateway;
     Config _cfg;
-    Module[] _modules;
 
 public:
+    Module[] modules;
+
     this(Gateway gateway, ref Config cfg) {
         _gateway = gateway;
         _cfg = cfg;
@@ -21,15 +22,18 @@ public:
     }
 
     void registerModules(Module[] modules) {
-        foreach (m; modules)
+        foreach (m; modules) {
+            m.bot = &this;
             m.prefix = _cfg.cmdPrefix;
-        _modules ~= modules;
+        }
+
+        this.modules ~= modules;
     }
 
     Response[] onMessage(ref Message msg) {
         Response[] res;
 
-        foreach (m; _modules) {
+        foreach (m; modules) {
             res ~= m.onMessage(msg);
 
             if (msg.handled)

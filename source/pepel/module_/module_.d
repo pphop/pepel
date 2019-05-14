@@ -2,6 +2,7 @@ module pepel.module_.module_;
 
 import std.typecons;
 
+import pepel.bot;
 import pepel.common;
 
 abstract class Module {
@@ -24,12 +25,12 @@ abstract class Module {
     }
 
 protected:
-    Command[string] _commands;
     Command.Handler[] _onEveryMsgHandlers;
     bool _disabled;
 
 public:
-
+    Bot* bot;
+    Command[string] commands;
     string prefix;
 
     final Response[] onMessage(Message msg) {
@@ -55,7 +56,7 @@ public:
             return res;
 
         if (msg.text.startsWith(prefix)) {
-            if (auto cmd = msg.args[0][prefix.length .. $] in _commands) {
+            if (auto cmd = msg.args[0][prefix.length .. $] in commands) {
                 if (cmd.isTriggered(msg)) {
                     auto resp = cmd.handler(msg);
                     if (!resp.isNull)
@@ -100,7 +101,7 @@ template generateCommands(T) {
                 Filter!(hasOnEveryMsgUDA, AliasSeq!(__traits(allMembers, T)))][1 .. $].map!(a => "&" ~ a)
                 .joiner(", "));
 
-        res ~= "_commands = [%s];".format([staticMap!(commandString,
+        res ~= "commands = [%s];".format([staticMap!(commandString,
                 Filter!(hasCommandUDA, AliasSeq!(__traits(allMembers, T))))].joiner(", "));
 
         return res;

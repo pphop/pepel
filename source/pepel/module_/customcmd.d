@@ -50,11 +50,11 @@ final class CustomCmdModule : Module {
 
     void retrieveCommands() {
         foreach (row; db.execute("SELECT * FROM customcmds WHERE platform = :platform", id))
-            _commands[row.peek!string(3)] = row.as!DBItem.toCommand;
+            commands[row.peek!string(3)] = row.as!DBItem.toCommand;
     }
 
     @command("addcmd", User.Role.botowner) NR addCmd(ref Message msg) {
-        import std.algorithm : map;
+        import std.algorithm : canFind, filter, joiner, map;
         import std.exception : collectException;
         import std.getopt : getopt, GetoptResult, config;
         import std.string : format, join;
@@ -81,8 +81,17 @@ final class CustomCmdModule : Module {
 
         auto trigger = args[1];
 
-        // TODO: check for commands in other modules
         {
+            if (bot.modules
+                    .map!(m => m.commands.byKeyValue)
+                    .joiner
+                    .filter!(p => p.value.channel == "" || p.value.channel == msg.channel.id)
+                    .map!(p => p.key)
+                    .canFind(trigger)) {
+                return NR(Response("command %s already exists".format(trigger)));
+            }
+
+            // is this necessary?
             bool exists;
             if (global)
                 exists = db.execute(
@@ -104,7 +113,7 @@ final class CustomCmdModule : Module {
                 global ? Nullable!string.init : msg.channel.id, trigger, actualRole, reply);
 
         auto cmd = Command(global ? "" : msg.channel.id, actualRole, handler(reply));
-        _commands[trigger] = cmd;
+        commands[trigger] = cmd;
 
         return NR(Response("👌"));
     }
@@ -154,7 +163,7 @@ final class CustomCmdModule : Module {
 
         db.execute("UPDATE customcmds SET reply = :reply WHERE id = :id", reply, id);
 
-        if (auto cmd = trigger in _commands) {
+        if (auto cmd = trigger in commands) {
             if (role != User.Role.none)
                 cmd.reqRole = role;
 
@@ -205,7 +214,7 @@ final class CustomCmdModule : Module {
 
         db.execute("DELETE FROM customcmds WHERE id = :id", cmdId);
 
-        _commands.remove(trigger);
+        commands.remove(trigger);
 
         return NR(Response("👌"));
     }

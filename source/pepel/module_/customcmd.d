@@ -21,7 +21,6 @@ final class CustomCmdModule : Module {
             Command cmd;
 
             cmd.channel = channel.isNull ? "" : channel.get;
-            cmd.trigger = trigger;
             cmd.reqRole = reqRole;
             cmd.handler = handler(reply);
 
@@ -50,12 +49,8 @@ final class CustomCmdModule : Module {
     }
 
     void retrieveCommands() {
-        Command[] cmds;
-
         foreach (row; db.execute("SELECT * FROM customcmds WHERE platform = :platform", id))
-            cmds ~= row.as!DBItem.toCommand;
-
-        registerCommands(cmds);
+            _commands[row.peek!string(3)] = row.as!DBItem.toCommand;
     }
 
     @command("addcmd", User.Role.botowner) NR addCmd(ref Message msg) {
@@ -108,15 +103,14 @@ final class CustomCmdModule : Module {
                     VALUES (:platform, :channel, :trigger, :role, :reply)", id,
                 global ? Nullable!string.init : msg.channel.id, trigger, actualRole, reply);
 
-        auto cmd = Command(global ? "" : msg.channel.id, trigger, actualRole, handler(reply));
-        registerCommands([cmd]);
+        auto cmd = Command(global ? "" : msg.channel.id, actualRole, handler(reply));
+        _commands[trigger] = cmd;
 
-        msg.handled = true;
         return NR(Response("👌"));
     }
 
     @command("updatecmd", User.Role.botowner) NR updateCmd(ref Message msg) {
-        import std.algorithm : find, map;
+        import std.algorithm : map;
         import std.exception : collectException;
         import std.getopt : getopt, GetoptResult, config;
         import std.string : format, join;
@@ -160,20 +154,18 @@ final class CustomCmdModule : Module {
 
         db.execute("UPDATE customcmds SET reply = :reply WHERE id = :id", reply, id);
 
-        auto cmds = _commands.find!((a, b) => a.trigger == b)(trigger);
-        if (cmds.length != 0) {
-            if (role != User.Role.none && cmds[0].reqRole != role)
-                cmds[0].reqRole = role;
+        if (auto cmd = trigger in _commands) {
+            if (role != User.Role.none)
+                cmd.reqRole = role;
 
-            cmds[0].handler = handler(reply);
+            cmd.handler = handler(reply);
         }
 
-        msg.handled = true;
         return NR(Response("👌"));
     }
 
     @command("removecmd", User.Role.botowner) NR removeCmd(ref Message msg) {
-        import std.algorithm : map, remove;
+        import std.algorithm : map;
         import std.exception : collectException;
         import std.getopt : getopt, GetoptResult, config;
         import std.string : format, join;
@@ -213,17 +205,12 @@ final class CustomCmdModule : Module {
 
         db.execute("DELETE FROM customcmds WHERE id = :id", cmdId);
 
-        _commands.remove!(a => a.trigger == trigger && (global ? a.channel == ""
-                : a.channel == msg.channel.id));
+        _commands.remove(trigger);
 
-        msg.handled = true;
         return NR(Response("👌"));
     }
 }
 
 private Module.Command.Handler handler(string reply) {
-    return (ref Message m) {
-        m.handled = true;
-        return Nullable!Response(Response(reply));
-    };
+    return (ref Message m) { return Nullable!Response(Response(reply)); };
 }

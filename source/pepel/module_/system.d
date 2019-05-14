@@ -15,14 +15,12 @@ final class SystemModule : Module {
     }
 
     @command("ping") NR ping(ref Message msg) {
-        msg.handled = true;
         return NR(Response("pong"));
     }
 
     @command("uptime") NR uptime(ref Message msg) {
         import std.format : format;
 
-        msg.handled = true;
         return NR(Response("running for %s".format(Clock.currTime - startTime)));
     }
 
@@ -30,7 +28,6 @@ final class SystemModule : Module {
         import std.format : format;
         import vibe.core.core : exitEventLoop;
 
-        msg.handled = true;
         exitEventLoop();
         return NR(Response("shutting down after running for %s".format(Clock.currTime - startTime)));
     }

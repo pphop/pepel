@@ -12,13 +12,19 @@ abstract class Module {
         alias Handler = NR delegate(ref Message);
 
         string channel;
-        string trigger;
         User.Role reqRole;
         Handler handler;
+
+        bool isTriggered(ref Message msg) {
+            // dfmt off
+            return msg.sender.role >= reqRole
+                && (channel == "" || channel == msg.channel.id);
+            // dfmt on
+        }
     }
 
 protected:
-    Command[] _commands;
+    Command[string] _commands;
     Command.Handler[] _onEveryMsgHandlers;
     bool _disabled;
 
@@ -27,6 +33,8 @@ public:
     string prefix;
 
     final Response[] onMessage(Message msg) {
+        import std.algorithm : startsWith;
+
         Response[] res;
 
         if (_disabled)
@@ -46,14 +54,13 @@ public:
         if (msg.handled)
             return res;
 
-        foreach (c; _commands) {
-            if (isTriggered(c, msg)) {
-                auto resp = c.handler(msg);
-                if (!resp.isNull)
-                    res ~= resp.get();
-
-                if (msg.handled)
-                    break;
+        if (msg.text.startsWith(prefix)) {
+            if (auto cmd = msg.args[0][prefix.length .. $] in _commands) {
+                if (cmd.isTriggered(msg)) {
+                    auto resp = cmd.handler(msg);
+                    if (!resp.isNull)
+                        res ~= resp;
+                }
             }
         }
 
@@ -62,27 +69,10 @@ public:
 
 protected:
 
-    final void registerCommands(Command[] cmds) {
-        _commands ~= cmds;
-    }
-
     final void registerOnEveryMsgHandlers(Command.Handler[] hs) {
         _onEveryMsgHandlers ~= hs;
     }
 
-private:
-
-    bool isTriggered(ref Command cmd, ref Message msg) {
-        import std.algorithm : startsWith;
-
-        // NotLikeThis
-        // dfmt off
-        return msg.sender.role >= cmd.reqRole
-            && (cmd.channel == "" || cmd.channel == msg.channel.id)
-            && msg.text.startsWith(prefix)
-            && msg.text[prefix.length .. $].startsWith(cmd.trigger);
-        // dfmt on
-    }
 }
 
 // UDAS
@@ -110,7 +100,7 @@ template generateCommands(T) {
                 Filter!(hasOnEveryMsgUDA, AliasSeq!(__traits(allMembers, T)))][1 .. $].map!(a => "&" ~ a)
                 .joiner(", "));
 
-        res ~= "registerCommands([%s]);".format([staticMap!(commandString,
+        res ~= "_commands = [%s];".format([staticMap!(commandString,
                 Filter!(hasCommandUDA, AliasSeq!(__traits(allMembers, T))))].joiner(", "));
 
         return res;
@@ -123,7 +113,7 @@ template generateCommands(T) {
 
         auto command = getUDAs!(__traits(getMember, T, member), command)[0];
 
-        return `Command("", "%s", User.Role.%s, &%s)`.format(command.trigger,
+        return `"%s": Command("", User.Role.%s, &%s)`.format(command.trigger,
                 command.reqRole == User.Role.none ? User.Role.pleb : command.reqRole, member);
     }
 }

@@ -3,7 +3,7 @@ module pepel.common;
 abstract class Gateway {
     protected Response[]delegate(ref Message) _onMessage;
 
-    @property final void onMessage(Response[]delegate(ref Message) hand) {
+    final void onMessage(Response[]delegate(ref Message) hand) {
         _onMessage = hand;
     }
 
@@ -33,7 +33,7 @@ struct Message {
     bool handled;
     bool mentionedBot;
 
-    @property string[] args() {
+    string[] args() {
         import std.string : split;
 
         return text.split;
@@ -41,7 +41,7 @@ struct Message {
 }
 
 abstract class Channel {
-    @property string id();
+    string id();
 }
 
 abstract class User {
@@ -57,6 +57,6 @@ abstract class User {
     Role role;
     string username;
 
-    @property string id();
+    string id();
     string mention();
 }

@@ -10,7 +10,7 @@ final class TwitchChannel : Channel {
         _name = name;
     }
 
-    override @property string id() {
+    override string id() {
         return _name;
     }
 }
@@ -18,7 +18,7 @@ final class TwitchChannel : Channel {
 final class TwitchUser : User {
 
     // maybe use actual twitch user id
-    override @property string id() {
+    override string id() {
         return username;
     }
 

@@ -12,7 +12,7 @@ final class DiscordChannel : Channel {
         _id = id;
     }
 
-    override @property string id() {
+    override string id() {
         return _id.toString;
     }
 }
@@ -25,7 +25,7 @@ final class DiscordUser : User {
         _id = id;
     }
 
-    override @property string id() {
+    override string id() {
         return _id.toString;
     }
 

@@ -17,7 +17,7 @@ private:
     void delegate(IRCMessage) _onPrivMsg;
 
 public:
-    @property void onPrivMsg(void delegate(IRCMessage) handler) {
+    void onPrivMsg(void delegate(IRCMessage) handler) {
         _onPrivMsg = handler;
     }
 

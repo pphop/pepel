@@ -31,4 +31,18 @@ final class SystemModule : Module {
         exitEventLoop();
         return NR(Response("shutting down after running for %s".format(Clock.currTime - startTime)));
     }
+
+    @command("commands") NR cmds(ref Message msg) {
+        import std.algorithm : filter, joiner, map, sort;
+        import std.array : array, join;
+
+        return NR(Response(bot.modules
+                .map!(m => m.commands.byKeyValue)
+                .joiner
+                .filter!(p => p.value.channel == "" || p.value.channel == msg.channel.id)
+                .map!(p => p.key)
+                .array
+                .sort
+                .join(", ")));
+    }
 }

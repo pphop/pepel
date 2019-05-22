@@ -1,11 +1,7 @@
 module pepel.common;
 
 abstract class Gateway {
-    protected Response[]delegate(ref Message) _onMessage;
-
-    final void onMessage(Response[]delegate(ref Message) hand) {
-        _onMessage = hand;
-    }
+    Response[]delegate(ref Message) onMessage;
 
     void connect();
     void close();

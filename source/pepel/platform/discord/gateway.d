@@ -34,7 +34,7 @@ private:
                 return;
 
             auto m = msg.toMsg(_cfg);
-            auto responses = _onMessage(m);
+            auto responses = onMessage(m);
 
             foreach (resp; responses) {
                 final switch (resp.type) {

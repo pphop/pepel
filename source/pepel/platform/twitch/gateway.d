@@ -30,7 +30,7 @@ public:
         writefln("Twitch #%s @%s: %s", msg.channel, msg.user.displayName, msg.text);
 
         auto m = msg.toMsg(_cfg.owner, _cfg.username);
-        auto responses = _onMessage(m);
+        auto responses = onMessage(m);
 
         foreach (resp; responses) {
             final switch (resp.type) {

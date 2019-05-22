@@ -27,7 +27,7 @@ public:
     }
 
     override void connect() {
-        _irc.connect(_cfg, _db.retreiveChannels);
+        _irc.connect(_cfg, _db.retrieveChannels);
     }
 
     override void close() {
@@ -55,7 +55,7 @@ public:
 
 private:
 
-string[] retreiveChannels(Database* db) {
+string[] retrieveChannels(Database* db) {
     string[] channels;
 
     auto rows = db.execute("SELECT channel FROM twitch_channels");

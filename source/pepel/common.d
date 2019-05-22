@@ -1,25 +1,31 @@
 module pepel.common;
 
+import std.variant;
+
 abstract class Gateway {
-    Response[]delegate(ref Message) onMessage;
+    Action[]delegate(ref Message) onMessage;
 
     void connect();
     void close();
-
-    /*
-    void join(string meme);
-    void leave(string meme);
-    */
 }
 
-struct Response {
-    enum Type {
-        chatroom,
-        dm
-    }
+alias Action = Algebraic!(Response, Whisper, Join, Leave);
 
+struct Response {
     string text;
-    Type type;
+}
+
+struct Whisper {
+    User user;
+    string text;
+}
+
+struct Join {
+    string channel;
+}
+
+struct Leave {
+    string channel;
 }
 
 struct Message {

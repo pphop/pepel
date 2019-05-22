@@ -21,7 +21,7 @@ public:
         _onPrivMsg = handler;
     }
 
-    void connect(Config.Twitch cfg) {
+    void connect(Config.Twitch cfg, string[] channels) {
         import std.algorithm : findSplitAfter;
         import std.format : format;
 
@@ -33,7 +33,9 @@ public:
             write("PASS oauth:%s".format(_token));
             write("NICK %s".format(_username));
             write("CAP REQ :twitch.tv/tags");
-            join(cfg.channels);
+            join(_username);
+            foreach (ch; channels)
+                join(ch);
 
             // TODO: handle disconnect
             while (_conn.connected && _conn.waitForData) {
@@ -61,9 +63,12 @@ public:
         _conn.close();
     }
 
-    void join(string[] channels) {
-        foreach (channel; channels)
-            write("JOIN #%s".format(channel));
+    void join(string channel) {
+        write("JOIN #%s".format(channel));
+    }
+
+    void part(string channel) {
+        write("PART #%s".format(channel));
     }
 
     void privMsg(string channel, string text) {

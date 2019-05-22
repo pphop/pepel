@@ -19,7 +19,7 @@ else {
         auto cfg = Config("monkas.json");
         auto db = Database("pepel.db");
 
-        auto twitchBot = Bot(new TwitchGateway(cfg.twitch), cfg);
+        auto twitchBot = Bot(new TwitchGateway(cfg.twitch, &db), cfg);
         twitchBot.registerModules([new SystemModule(), new CustomCmdModule("Twitch", &db)]);
         scope (exit)
             twitchBot.closeConnection();

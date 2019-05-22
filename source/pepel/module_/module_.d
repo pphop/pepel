@@ -1,16 +1,12 @@
 module pepel.module_.module_;
 
-import std.typecons;
-
 import pepel.bot;
 import pepel.common;
 
 abstract class Module {
 
-    alias NR = Nullable!Response;
-
     struct Command {
-        alias Handler = NR delegate(ref Message);
+        alias Handler = Action delegate(ref Message);
 
         string channel;
         User.Role reqRole;
@@ -33,34 +29,29 @@ public:
     Command[string] commands;
     string prefix;
 
-    final Response[] onMessage(Message msg) {
+    final Action[] onMessage(Message msg) {
         import std.algorithm : startsWith;
 
-        Response[] res;
-
         if (_disabled)
-            return res;
+            return Action[].init;
 
-        // TODO: make this less scuffed
+        Action[] res;
 
         foreach (h; _onEveryMsgHandlers) {
-            auto resp = h(msg);
-            if (!resp.isNull)
-                res ~= resp.get();
+            auto action = h(msg);
+            if (action.hasValue)
+                res ~= action;
 
             if (msg.handled)
-                break;
+                return res;
         }
-
-        if (msg.handled)
-            return res;
 
         if (msg.text.startsWith(prefix)) {
             if (auto cmd = msg.args[0][prefix.length .. $] in commands) {
                 if (cmd.isTriggered(msg)) {
-                    auto resp = cmd.handler(msg);
-                    if (!resp.isNull)
-                        res ~= resp;
+                    auto action = cmd.handler(msg);
+                    if (action.hasValue)
+                        res ~= action;
                 }
             }
         }

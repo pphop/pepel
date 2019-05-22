@@ -53,7 +53,7 @@ final class CustomCmdModule : Module {
             commands[row.peek!string(3)] = row.as!DBItem.toCommand;
     }
 
-    @command("addcmd", User.Role.botowner) NR addCmd(ref Message msg) {
+    @command("addcmd", User.Role.botowner) Action addCmd(ref Message msg) {
         import std.algorithm : canFind, filter, joiner, map;
         import std.exception : collectException;
         import std.getopt : getopt, GetoptResult, config;
@@ -67,17 +67,17 @@ final class CustomCmdModule : Module {
         if (args.getopt("global|g", &global, "role|r",
                 "either of [pleb, trusted, privileged, moderator, botowner]", &role).collectException(
                 res) !is null)
-            return NR(Response("something went wrong"));
+            return Response("something went wrong").Action;
 
         if (res.helpWanted) {
             auto buf = "available options: ";
             buf ~= res.options.map!(opt => "%s %s %s".format(opt.optLong,
                     opt.optShort, opt.help)).join(", ");
-            return NR(Response(buf));
+            return Response(buf).Action;
         }
 
         if (args.length < 3)
-            return NR(Response("😦"));
+            return Response("😦").Action;
 
         auto trigger = args[1];
 
@@ -88,7 +88,7 @@ final class CustomCmdModule : Module {
                     .filter!(p => p.value.channel == "" || p.value.channel == msg.channel.id)
                     .map!(p => p.key)
                     .canFind(trigger)) {
-                return NR(Response("command %s already exists".format(trigger)));
+                return Response("command %s already exists".format(trigger)).Action;
             }
 
             // is this necessary?
@@ -102,7 +102,7 @@ final class CustomCmdModule : Module {
                         msg.channel.id, id, trigger).oneValue!int != 0;
 
             if (exists)
-                return NR(Response("command %s already exists".format(trigger)));
+                return Response("command %s already exists".format(trigger)).Action;
         }
 
         auto actualRole = role == User.Role.none ? User.Role.pleb : role;
@@ -115,10 +115,10 @@ final class CustomCmdModule : Module {
         auto cmd = Command(global ? "" : msg.channel.id, actualRole, handler(reply));
         commands[trigger] = cmd;
 
-        return NR(Response("👌"));
+        return Response("👌").Action;
     }
 
-    @command("updatecmd", User.Role.botowner) NR updateCmd(ref Message msg) {
+    @command("updatecmd", User.Role.botowner) Action updateCmd(ref Message msg) {
         import std.algorithm : map;
         import std.exception : collectException;
         import std.getopt : getopt, GetoptResult, config;
@@ -130,17 +130,17 @@ final class CustomCmdModule : Module {
         GetoptResult res;
         if (args.getopt("role|r", "either of [pleb, trusted, privileged, moderator, botowner]",
                 &role).collectException(res) !is null)
-            return NR(Response("something went wrong"));
+            return Response("something went wrong").Action;
 
         if (res.helpWanted) {
             auto buf = "available options: ";
             buf ~= res.options.map!(opt => "%s %s %s".format(opt.optLong,
                     opt.optShort, opt.help)).join(", ");
-            return NR(Response(buf));
+            return Response(buf).Action;
         }
 
         if (args.length < 3)
-            return NR(Response("😦"));
+            return Response("😦").Action;
 
         auto trigger = args[1];
 
@@ -148,11 +148,11 @@ final class CustomCmdModule : Module {
                 id, trigger);
 
         if (queryRes.empty)
-            return NR(Response("command %s does not exist".format(trigger)));
+            return Response("command %s does not exist".format(trigger)).Action;
 
         auto channel = queryRes.front.peek!(Nullable!string)(2);
         if (!channel.isNull && channel.get != msg.channel.id)
-            return NR(Response("command %s does not exist".format(trigger)));
+            return Response("command %s does not exist".format(trigger)).Action;
 
         auto reply = args[2 .. $].join(" ");
 
@@ -170,10 +170,10 @@ final class CustomCmdModule : Module {
             cmd.handler = handler(reply);
         }
 
-        return NR(Response("👌"));
+        return Response("👌").Action;
     }
 
-    @command("removecmd", User.Role.botowner) NR removeCmd(ref Message msg) {
+    @command("removecmd", User.Role.botowner) Action removeCmd(ref Message msg) {
         import std.algorithm : map;
         import std.exception : collectException;
         import std.getopt : getopt, GetoptResult, config;
@@ -184,17 +184,17 @@ final class CustomCmdModule : Module {
 
         GetoptResult res;
         if (args.getopt("global|g", &global).collectException(res) !is null)
-            return NR(Response("something went wrong"));
+            return Response("something went wrong").Action;
 
         if (res.helpWanted) {
             auto buf = "available options: ";
             buf ~= res.options.map!(opt => "%s %s %s".format(opt.optLong,
                     opt.optShort, opt.help)).join(", ");
-            return NR(Response(buf));
+            return Response(buf).Action;
         }
 
         if (args.length < 2)
-            return NR(Response("😦"));
+            return Response("😦").Action;
 
         auto trigger = args[1];
 
@@ -210,16 +210,16 @@ final class CustomCmdModule : Module {
         auto cmdId = queryRes.empty ? 0 : queryRes.oneValue!int;
 
         if (cmdId == 0)
-            return NR(Response("command %s does not exists".format(trigger)));
+            return Response("command %s does not exists".format(trigger)).Action;
 
         db.execute("DELETE FROM customcmds WHERE id = :id", cmdId);
 
         commands.remove(trigger);
 
-        return NR(Response("👌"));
+        return Response("👌").Action;
     }
 }
 
 private Module.Command.Handler handler(string reply) {
-    return (ref Message m) { return Nullable!Response(Response(reply)); };
+    return (ref Message m) { return Response(reply).Action; };
 }

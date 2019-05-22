@@ -14,35 +14,48 @@ final class SystemModule : Module {
         startTime = Clock.currTime;
     }
 
-    @command("ping") NR ping(ref Message msg) {
-        return NR(Response("pong"));
+    @command("ping") Action ping(ref Message msg) {
+        return Response("pong").Action;
     }
 
-    @command("uptime") NR uptime(ref Message msg) {
+    @command("uptime") Action uptime(ref Message msg) {
         import std.format : format;
 
-        return NR(Response("running for %s".format(Clock.currTime - startTime)));
+        return Response("running for %s".format(Clock.currTime - startTime)).Action;
     }
 
-    @command("shutdown", User.Role.botowner) NR shutdown(ref Message msg) {
+    @command("shutdown", User.Role.botowner) Action shutdown(ref Message msg) {
         import std.format : format;
         import vibe.core.core : exitEventLoop;
 
         exitEventLoop();
-        return NR(Response("shutting down after running for %s".format(Clock.currTime - startTime)));
+        return Response("shutting down after running for %s".format(Clock.currTime - startTime))
+            .Action;
     }
 
-    @command("commands") NR cmds(ref Message msg) {
+    @command("commands") Action cmds(ref Message msg) {
         import std.algorithm : filter, joiner, map, sort;
         import std.array : array, join;
 
-        return NR(Response(bot.modules
+        return Response(bot.modules
                 .map!(m => m.commands.byKeyValue)
                 .joiner
                 .filter!(p => p.value.channel == "" || p.value.channel == msg.channel.id)
                 .map!(p => p.key)
                 .array
                 .sort
-                .join(", ")));
+                .join(", ")).Action;
+    }
+
+    @command("join", User.Role.botowner) Action join(ref Message msg) {
+        if (msg.args.length > 1)
+            return Join(msg.args[1]).Action;
+        return Action.init;
+    }
+
+    @command("leave", User.Role.botowner) Action leave(ref Message msg) {
+        if (msg.args.length > 1)
+            return Leave(msg.args[1]).Action;
+        return Action.init;
     }
 }

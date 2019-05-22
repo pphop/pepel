@@ -30,8 +30,8 @@ public:
         this.modules ~= modules;
     }
 
-    Response[] onMessage(ref Message msg) {
-        Response[] res;
+    Action[] onMessage(ref Message msg) {
+        Action[] res;
 
         foreach (m; modules) {
             res ~= m.onMessage(msg);

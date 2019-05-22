@@ -1,5 +1,7 @@
 module pepel.platform.discord.gateway;
 
+import std.variant;
+
 static import discord.w;
 import vibe.core.core;
 
@@ -34,19 +36,14 @@ private:
                 return;
 
             auto m = msg.toMsg(_cfg);
-            auto responses = onMessage(m);
+            auto actions = onMessage(m);
 
-            foreach (resp; responses) {
-                final switch (resp.type) {
-                case Response.Type.chatroom:
-                    _gateway.channel(msg.channel_id)
-                        .sendMessage(resp.text);
-                    break;
-                case Response.Type.dm:
-                    // TODO
-                    break;
-                }
-            }
+            // TODO: handle whisper/join/leave
+            // dfmt off
+            foreach (a; actions)
+                a.visit!((Response resp) { _gateway.channel(msg.channel_id).sendMessage(resp.text); },
+                        anything => writefln("discord: unhandled action: %s", anything));
+            // dfmt on
         }
     }
 

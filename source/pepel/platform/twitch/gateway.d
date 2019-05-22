@@ -1,5 +1,9 @@
 module pepel.platform.twitch.gateway;
 
+import std.variant;
+
+import d2sqlite3;
+
 import pepel.config, pepel.common;
 import pepel.platform.twitch.irc;
 import pepel.platform.twitch.types;
@@ -8,15 +12,22 @@ final class TwitchGateway : Gateway {
 private:
     IRCClient _irc;
     Config.Twitch _cfg;
+    Database* _db;
 
 public:
-    this(ref Config.Twitch cfg) {
+    this(ref Config.Twitch cfg, Database* db) {
         _cfg = cfg;
+        _db = db;
         _irc.onPrivMsg = &onPrivMsg;
+
+        _db.run("CREATE TABLE IF NOT EXISTS twitch_channels (
+            id INTEGER PRIMARY KEY,
+            channel TEXT NOT NULL
+        )");
     }
 
     override void connect() {
-        _irc.connect(_cfg);
+        _irc.connect(_cfg, _db.retreiveChannels);
     }
 
     override void close() {
@@ -30,22 +41,42 @@ public:
         writefln("Twitch #%s @%s: %s", msg.channel, msg.user.displayName, msg.text);
 
         auto m = msg.toMsg(_cfg.owner, _cfg.username);
-        auto responses = onMessage(m);
+        auto actions = onMessage(m);
 
-        foreach (resp; responses) {
-            final switch (resp.type) {
-            case Response.Type.chatroom:
-                _irc.privMsg(msg.channel, resp.text);
-                break;
-            case Response.Type.dm:
-                _irc.whisper(msg.user.username, resp.text);
-                break;
-            }
-        }
+        // dfmt off
+        foreach (a; actions)
+            a.visit!((Response resp) => _irc.privMsg(msg.channel, resp.text),
+                    (Whisper w) => _irc.whisper(w.user.username, w.text),
+                    (Join j) { _db.addChannel(j.channel); _irc.join(j.channel); },
+                    (Leave l) { _db.removeChannel(l.channel); _irc.part(l.channel); });
+        // dfmt on
     }
 }
 
-private Message toMsg(IRCMessage ircMsg, string botowner, string username) {
+private:
+
+string[] retreiveChannels(Database* db) {
+    string[] channels;
+
+    auto rows = db.execute("SELECT channel FROM twitch_channels");
+    foreach (row; rows)
+        channels ~= row.peek!string(0);
+
+    return channels;
+}
+
+void addChannel(Database* db, string channel) {
+    db.execute("INSERT INTO twitch_channels (channel)
+                SELECT :channel
+                WHERE NOT EXISTS (SELECT 1 FROM twitch_channels WHERE channel = :channel)",
+            channel);
+}
+
+void removeChannel(Database* db, string channel) {
+    db.execute("DELETE FROM twitch_channels WHERE channel = :channel", channel);
+}
+
+Message toMsg(IRCMessage ircMsg, string botowner, string username) {
     import std.algorithm : canFind;
 
     auto msg = Message();

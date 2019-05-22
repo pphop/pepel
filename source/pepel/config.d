@@ -7,7 +7,6 @@ struct Config {
         string username;
         string token;
         string owner;
-        string[] channels;
     }
 
     struct Discord {
@@ -29,30 +28,5 @@ struct Config {
         this = read(path).to!string
             .deserializeJson!Config;
         _configPath = path;
-    }
-
-    void addChannel(string channel) {
-        import std.algorithm : canFind;
-
-        if (twitch.channels.canFind(channel)) {
-            return;
-        }
-        twitch.channels ~= channel;
-        save();
-    }
-
-    private void save() {
-        import std.file : exists, remove, rename, write;
-
-        import vibe.data.json : serializeToPrettyJson;
-
-        auto tmpfile = "config.tmp";
-        scope (failure) {
-            assert(tmpfile.exists);
-            tmpfile.remove();
-        }
-
-        tmpfile.write(this.serializeToPrettyJson());
-        tmpfile.rename(_configPath);
     }
 }

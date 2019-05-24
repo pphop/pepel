@@ -1,4 +1,4 @@
-module pepel.module_.customcmd;
+module pepel.module_.customcmd.customcmd;
 
 import std.typecons;
 
@@ -6,6 +6,7 @@ import d2sqlite3;
 
 import pepel.common;
 import pepel.module_.module_;
+import pepel.module_.customcmd.handler;
 
 final class CustomCmdModule : Module {
 
@@ -218,8 +219,4 @@ final class CustomCmdModule : Module {
 
         return Response("👌").Action;
     }
-}
-
-private Module.Command.Handler handler(string reply) {
-    return (ref Message m) { return Response(reply).Action; };
 }

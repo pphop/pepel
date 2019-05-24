@@ -14,7 +14,6 @@ version (unittest) {
     }
 }
 else {
-
     void main() {
         auto cfg = Config("monkas.json");
         auto db = Database("pepel.db");

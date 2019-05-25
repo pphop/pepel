@@ -3,8 +3,6 @@ module pepel.module_.customcmd.handler;
 import std.algorithm;
 import std.array;
 import std.format;
-import std.string;
-import std.regex;
 import std.traits;
 import std.typecons;
 

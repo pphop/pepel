@@ -56,7 +56,7 @@ alias DefaultFormatter = Formatter!(
         requestHTTP(url, (scope req) { req.method = HTTPMethod.GET; }, (scope res) {
             auto raw = res.bodyReader.readAllUTF8();
 
-            if (scheme == RAW) {
+            if (scheme == "RAW") {
                 result = raw;
                 return;
             }

@@ -14,19 +14,20 @@ version (unittest) {
     }
 }
 else {
-    void main() {
-        auto cfg = Config("monkas.json");
+    void main(string[] args) {
+        auto cfg = Config(args.length > 1 ? args[1] : "config.json");
         auto db = Database("pepel.db");
 
         auto twitchBot = Bot(new TwitchGateway(cfg.twitch, &db), cfg);
         twitchBot.registerModules([new SystemModule(), new CustomCmdModule("Twitch", &db)]);
-        scope (exit)
-            twitchBot.closeConnection();
+        // TODO: make this less scuffed
+        if (cfg.twitch.token != "")
+            twitchBot.connect();
 
         auto discordBot = Bot(new DiscordGateway(cfg.discord), cfg);
         discordBot.registerModules([new SystemModule(), new CustomCmdModule("Discord", &db)]);
-        scope (exit)
-            discordBot.closeConnection();
+        if (cfg.discord.token != "")
+            discordBot.connect();
 
         runApplication();
     }

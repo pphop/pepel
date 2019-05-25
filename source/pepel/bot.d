@@ -14,11 +14,14 @@ public:
         _gateway = gateway;
         _cfg = cfg;
         _gateway.onMessage = &onMessage;
-        _gateway.connect();
     }
 
-    void closeConnection() {
+    ~this() {
         _gateway.close();
+    }
+
+    void connect() {
+        _gateway.connect();
     }
 
     void registerModules(Module[] modules) {

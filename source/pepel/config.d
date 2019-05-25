@@ -1,7 +1,7 @@
 module pepel.config;
 
 struct Config {
-    import vibe.data.json : name;
+    import vibe.data.json : name, optional;
 
     struct Twitch {
         string username;
@@ -14,8 +14,8 @@ struct Config {
         ulong ownerID;
     }
 
-    Twitch twitch;
-    Discord discord;
+    @optional Twitch twitch;
+    @optional Discord discord;
     @name("command_prefix") string cmdPrefix;
 
     this(string path) {

@@ -1,5 +1,7 @@
 module pepel.platform.twitch.irc.client;
 
+import std.format : format;
+
 import vibe.core.core;
 import vibe.core.net;
 import vibe.stream.operations;
@@ -23,7 +25,6 @@ public:
 
     void connect(Config.Twitch cfg, string[] channels) {
         import std.algorithm : findSplitAfter;
-        import std.format : format;
 
         _username = cfg.username;
         _token = cfg.token;

@@ -1,0 +1,12 @@
+{
+    "twitch": {
+        "username": "KKona",
+        "token": "zqwertyuiopasdfghjkl1234567890",
+        "owner": "Pepega"
+    },
+    "discord": {
+        "token": "zqwertyuiopasdfghjkl1234567890zqwertyuiopasdfghjkl123456789",
+        "ownerID": 12345678901234567890
+    },
+    "command_prefix": "!"
+}

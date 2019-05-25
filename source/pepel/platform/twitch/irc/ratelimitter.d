@@ -26,24 +26,3 @@ public:
         }
     }
 }
-
-unittest {
-    import std.datetime.stopwatch;
-    import vibe.core.core;
-
-    StopWatch sw;
-    RateLimitter rl;
-
-    auto d = rl.repeat;
-
-    runTask({
-        sw.start();
-        rl.wait();
-        assert(sw.peek >= 0.msecs && sw.peek < d);
-        rl.wait();
-        assert(sw.peek >= d && sw.peek < d * 2);
-        rl.wait();
-        assert(sw.peek >= d * 2 && sw.peek < d * 3);
-        sw.stop();
-    }).join();
-}

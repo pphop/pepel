@@ -8,6 +8,10 @@ import std.regex;
 import std.traits;
 import std.typecons;
 
+import vibe.data.json;
+import vibe.http.client;
+import vibe.stream.operations;
+
 import pepel.common;
 import pepel.module_.module_;
 
@@ -31,7 +35,12 @@ string formatReply(F : Formatter!Args = DefaultFormatter, Args...)(
 
 // dfmt off
 alias DefaultFormatter = Formatter!(
-    "{args.%d}", (ref Message msg, int i) { return msg.args[i]; },
+    "{args.%d}", (ref Message msg, int i) {
+        import std.exception : enforce;
+
+        enforce(msg.args.length > i, "not enough arguments");
+        return msg.args[i]; 
+    },
     "{rand(%d)}", (int max) {
         import std.random : uniform;
 
@@ -41,6 +50,26 @@ alias DefaultFormatter = Formatter!(
         import std.random : uniform;
 
         return uniform!"[]"(min, max);
+    },
+    "{get(%s).%s}", (string url, string scheme) {
+        string result;
+        requestHTTP(url, (scope req) { req.method = HTTPMethod.GET; }, (scope res) {
+            auto raw = res.bodyReader.readAllUTF8();
+
+            if (scheme == RAW) {
+                result = raw;
+                return;
+            }
+
+            auto j = raw.parseJsonString();
+
+            auto keys = scheme.split(".");
+            foreach (key; keys)
+                j = j[key];
+
+            result = j.get!string;
+        });
+        return result;
     });
 // dfmt on
 
@@ -51,7 +80,7 @@ struct Formatter(T...) {
         auto res = formatString;
         static foreach (i, fmt; T) {
             static if (is(typeof(fmt) == string)) {
-                foreach (match; formatString.matches(fmt)) {
+                foreach (match; res.matches(fmt)) {
                     res = res.replace(match, call!(T[i + 1], fmt)(msg, match).to!string);
                 }
             }
@@ -107,7 +136,7 @@ string[] matches(string haystack, string fmt) {
             regexStr ~= `\d+`;
             break;
         case 's':
-            regexStr ~= `\w+`;
+            regexStr ~= `[\w.:\/]+`;
             break;
         default:
             assert(0);
